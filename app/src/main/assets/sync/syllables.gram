@@ -1,0 +1,13 @@
+#JSGF V1.0;
+
+grammar syllables;
+
+<syllable> = do   |
+          re  |
+          mi   |
+          fa   |
+          so |
+          la  |
+          ti ;
+
+public <syllables> = <syllable>+;
