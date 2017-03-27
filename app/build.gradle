@@ -1,12 +1,12 @@
 apply plugin: 'com.android.application'
 android {
     compileSdkVersion 22
-    buildToolsVersion "25.0.2"
+    buildToolsVersion "25.0.0"
 
     defaultConfig {
         applicationId "com.midisheetmusic"
-        minSdkVersion 9
-        targetSdkVersion 20
+        minSdkVersion 14
+        targetSdkVersion 22
     }
 
     buildTypes {

@@ -344,7 +344,11 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
 
     @Override
     public void onPitch(float pitchInHz) {
+        if (pitchInHz <=0 )
+            return;
 
+        sheet.setSingPitchHz( pitchInHz ); //293.7f); //pitchInHz);
+        //sheet.callOnDraw();
     }
 
     @Override

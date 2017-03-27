@@ -35,6 +35,12 @@ public class ChordSymbol implements MusicSymbol {
     private boolean hastwostems;   /** True if this chord has two stems */
     private SheetMusic sheetmusic; /** Used to get colors and other options */
 
+    private float singPitchInHz = -1; /** Current detected sing pitch */
+
+    private final static int COLOR_HIGH = Color.RED;
+    private final static int COLOR_LOW = Color.BLUE;
+    private final static int COLOR_GOOD = Color.GREEN;
+
 
     /** Create a new Chord Symbol from the given list of midi notes.
      * All the midi notes will have the same start time.  Use the
@@ -471,6 +477,7 @@ public class ChordSymbol implements MusicSymbol {
         /* Draw the notes */
         canvas.translate(xpos, 0);
         DrawNotes(canvas, paint, ytop, topstaff);
+        DrawSingingNote(canvas, paint, ytop, topstaff);
 
         if (sheetmusic != null && sheetmusic.getShowNoteLetters() != 0) {
             DrawNoteLetters(canvas, paint, ytop, topstaff);
@@ -510,6 +517,7 @@ public class ChordSymbol implements MusicSymbol {
         }
         return xpos;
     }
+
 
     /** Draw the black circle notes.
      * @param ytop The ylocation (in pixels) where the top of the staff starts.
@@ -616,6 +624,145 @@ public class ChordSymbol implements MusicSymbol {
 
         }
     }
+
+    public void DrawSingingNote(Canvas canvas, Paint paint, int ytop, WhiteNote topstaff) {
+        if (singPitchInHz <= 0)
+            return;
+
+        paint.setStrokeWidth(1);
+
+        int closestNoteNumber = MidiNote.getClosestNoteNumber(singPitchInHz);
+
+        WhiteNote wnote = null;
+        // Transfer the note number to a whitenote by comparing
+        for (int offset = 4; offset >= -12; offset -- ) {
+            wnote = topstaff.Add (offset);
+            if (wnote.getNumber() <= closestNoteNumber)
+                break;
+        }
+
+        NoteData note = new NoteData();
+        note.whitenote = wnote;
+        note.accid = (wnote.getNumber() < closestNoteNumber ? Accid.Sharp : Accid.None);
+        note.leftside = true;
+        note.duration = NoteDuration.Whole;
+        note.number = closestNoteNumber;
+
+        /* Get whether it is high, low or in tune */
+        NoteData rightNote = notedata[0];
+        if (closestNoteNumber == rightNote.number)
+            paint.setColor( COLOR_GOOD );
+        else if (closestNoteNumber > rightNote.number)
+            paint.setColor( COLOR_HIGH );
+        else
+            paint.setColor( COLOR_LOW );
+
+        /* Get the x,y position to draw the note */
+        int ynote = ytop + topstaff.Dist(note.whitenote) *
+                SheetMusic.NoteHeight/2;
+
+        /* Adjust the y position based on pitch difference */
+        float pitchExact = MidiNote.getPitchInHz(rightNote.number);
+        float pitchAbove = MidiNote.getPitchInHz(rightNote.whitenote.Add(1).getNumber());
+        float pitchBelow = MidiNote.getPitchInHz(rightNote.whitenote.Add(-1).getNumber());
+
+        if (singPitchInHz >= pitchExact)
+            ynote = ynote - Math.round(
+                    SheetMusic.NoteHeight / 2f *
+                            (singPitchInHz - pitchExact) / (pitchAbove - pitchExact));
+        else
+            ynote = ynote + Math.round(
+                    SheetMusic.NoteHeight / 2f *
+                            (pitchExact - singPitchInHz) / (pitchExact - pitchAbove));
+
+        int xnote = SheetMusic.LineSpace/4;
+        if (!note.leftside)
+            xnote += SheetMusic.NoteWidth;
+
+        /* Draw rotated ellipse.  You must first translate (0,0)
+         * to the center of the ellipse.
+         */
+        canvas.translate(xnote + SheetMusic.NoteWidth/2 + 1,
+                ynote - SheetMusic.LineWidth + SheetMusic.NoteHeight/2);
+        canvas.rotate(-45);
+
+
+        if (note.duration == NoteDuration.Whole ||
+                note.duration == NoteDuration.Half ||
+                note.duration == NoteDuration.DottedHalf) {
+
+            RectF rect = new RectF(-SheetMusic.NoteWidth/2, -SheetMusic.NoteHeight/2,
+                    -SheetMusic.NoteWidth/2 + SheetMusic.NoteWidth,
+                    -SheetMusic.NoteHeight/2 + SheetMusic.NoteHeight-1);
+            canvas.drawOval(rect, paint);
+            rect = new RectF(-SheetMusic.NoteWidth/2, -SheetMusic.NoteHeight/2 + 1,
+                    -SheetMusic.NoteWidth/2 +  SheetMusic.NoteWidth,
+                    -SheetMusic.NoteHeight/2 + 1 + SheetMusic.NoteHeight-2);
+            canvas.drawOval(rect, paint);
+            rect = new RectF(-SheetMusic.NoteWidth/2, -SheetMusic.NoteHeight/2 + 1,
+                    -SheetMusic.NoteWidth/2 + SheetMusic.NoteWidth,
+                    -SheetMusic.NoteHeight/2 + 1 + SheetMusic.NoteHeight-3);
+            canvas.drawOval(rect, paint);
+
+        }
+        else {
+            paint.setStyle(Paint.Style.FILL);
+            RectF rect = new RectF(-SheetMusic.NoteWidth/2, -SheetMusic.NoteHeight/2,
+                    -SheetMusic.NoteWidth/2 + SheetMusic.NoteWidth,
+                    -SheetMusic.NoteHeight/2 + SheetMusic.NoteHeight-1);
+            canvas.drawOval(rect, paint);
+            paint.setStyle(Paint.Style.STROKE);
+        }
+
+        paint.setColor(Color.BLACK);
+
+        canvas.rotate(45);
+        canvas.translate(- (xnote + SheetMusic.NoteWidth/2 + 1),
+                - (ynote - SheetMusic.LineWidth + SheetMusic.NoteHeight/2));
+
+        /* Draw a dot if this is a dotted duration. */
+        if (note.duration == NoteDuration.DottedHalf ||
+                note.duration == NoteDuration.DottedQuarter ||
+                note.duration == NoteDuration.DottedEighth) {
+
+            RectF rect = new RectF(xnote + SheetMusic.NoteWidth + SheetMusic.LineSpace/3,
+                    ynote + SheetMusic.LineSpace/3,
+                    xnote + SheetMusic.NoteWidth + SheetMusic.LineSpace/3 + 4,
+                    ynote + SheetMusic.LineSpace/3 + 4);
+            paint.setStyle(Paint.Style.FILL);
+            canvas.drawOval(rect, paint);
+            paint.setStyle(Paint.Style.STROKE);
+        }
+
+        /* Draw horizontal lines if note is above/below the staff */
+        WhiteNote top = topstaff.Add(1);
+        int dist = note.whitenote.Dist(top);
+        int y = ytop - SheetMusic.LineWidth;
+
+        if (dist >= 2) {
+            for (int i = 2; i <= dist; i += 2) {
+                y -= SheetMusic.NoteHeight;
+                canvas.drawLine(xnote - SheetMusic.LineSpace/4, y,
+                        xnote + SheetMusic.NoteWidth + SheetMusic.LineSpace/4,
+                        y, paint);
+            }
+        }
+
+        WhiteNote bottom = top.Add(-8);
+        y = ytop + (SheetMusic.LineSpace + SheetMusic.LineWidth) * 4 - 1;
+        dist = bottom.Dist(note.whitenote);
+        if (dist >= 2) {
+            for (int i = 2; i <= dist; i+= 2) {
+                y += SheetMusic.NoteHeight;
+                canvas.drawLine(xnote - SheetMusic.LineSpace/4, y,
+                        xnote + SheetMusic.NoteWidth + SheetMusic.LineSpace/4,
+                        y, paint);
+            }
+        }
+        /* End drawing horizontal lines */
+    }
+
+
 
     /** Draw the note letters (A, A#, Bb, etc) next to the note circles.
      * @param ytop The y location (in pixels) where the top of the staff starts.
@@ -993,6 +1140,31 @@ public class ChordSymbol implements MusicSymbol {
             result += stem2.toString() + " ";
         }
         return result; 
+    }
+
+    public void setSingPitchInHz(float singPitchInHz) {
+
+        /* Try to see whether double, or half, is more close */
+        int noteRight = notedata[0].number;
+
+        int dDouble = Math.abs(MidiNote.getClosestNoteNumber(singPitchInHz*2) - noteRight);
+        int dHalf = Math.abs(MidiNote.getClosestNoteNumber(singPitchInHz/2) - noteRight);
+        int dOrig = Math.abs(MidiNote.getClosestNoteNumber(singPitchInHz) - noteRight);
+        /*double dDouble = Math.abs(Math.log(singPitchInHz * 2) - logRight);
+        double dHalf =  Math.abs(Math.log(singPitchInHz / 2) - logRight);
+        double dOrig =  Math.abs(Math.log(singPitchInHz) - logRight);*/
+
+        if (dOrig < dDouble && dOrig < dHalf)
+            this.singPitchInHz = singPitchInHz;
+        else if (dDouble < dHalf)
+            this.singPitchInHz = singPitchInHz * 2;
+        else
+            this.singPitchInHz = singPitchInHz / 2;
+
+    }
+
+    public float getSingPitchInHz() {
+        return singPitchInHz;
     }
 
 }

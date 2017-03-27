@@ -96,6 +96,21 @@ public class MidiNote implements Comparator<MidiNote> {
 
     }
 
+    /**
+     * Get the pitch in Hz of this note
+     * @return
+     */
+    static public float getPitchInHz(int notenumber) {
+        return (float)(Math.pow(2, (notenumber - 69) / 12f) * 440f);
+    }
+
+    /**
+     * Get closest MidiNote from the pitch (in Hz)
+     * The returned MidiNote is the note closest to the pitch
+     */
+    static public int getClosestNoteNumber(float pitchInHz) {
+        return (int)Math.round(69 + 12 * Math.log(pitchInHz / 440f) / Math.log(2f));
+    }
 }
 
 

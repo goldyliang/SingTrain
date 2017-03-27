@@ -62,24 +62,7 @@ public class TrainDetector implements RecognitionListener, PitchDetectionHandler
             return;
         }
 
-        PitchDetectionHandler pdh = new PitchDetectionHandler() {
-            @Override
-            public void handlePitch(PitchDetectionResult result, AudioEvent e) {
-                final float pitchInHz = result.getPitch();
-                final long time = System.currentTimeMillis();
-                System.out.println("Pitch," + String.valueOf(time) + "," + String.valueOf(pitchInHz));//)%d,%f")
-                //writer.printf("%d,%f", time, pitchInHz);
-                        /*runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                TextView text = (TextView) findViewById(R.id.result_text);
-                                text.setText( " " + pitchInHz);
-                                //System.currentTimeMillis()
-                            }
-                        }); */
-            }
-        };
-        AudioProcessor p = new PitchProcessor(PitchProcessor.PitchEstimationAlgorithm.FFT_YIN, 22050, 1024, pdh);
+        AudioProcessor p = new PitchProcessor(PitchProcessor.PitchEstimationAlgorithm.FFT_YIN, 16000, 1024, this);
         dispatcher.addAudioProcessor(p);
         new Thread(dispatcher, "Audio Dispatcher").start();
 
@@ -173,7 +156,7 @@ public class TrainDetector implements RecognitionListener, PitchDetectionHandler
         }
 
         if (syllable.length() > 0) {
-            //System.out.println("Syllable," + String.valueOf(time) + "," + syllable);
+            System.out.println("Syllable," + String.valueOf(time) + "," + syllable);
             writer.printf("Syllable,%d,%s", time, syllable);
             listener.onSyllable(syllable);
         }
@@ -182,9 +165,14 @@ public class TrainDetector implements RecognitionListener, PitchDetectionHandler
         cacheResult = text;
     }
 
+    @Override
     public void handlePitch(PitchDetectionResult result, AudioEvent e) {
+
         final float pitchInHz = result.getPitch();
         final long time = System.currentTimeMillis();
+        System.out.println("Pitch," + String.valueOf(time) + "," + String.valueOf(pitchInHz));//)%d,%f")
+        //writer.printf("%d,%f", time, pitchInHz);
+
         listener.onPitch(pitchInHz);
     }
 

@@ -64,6 +64,11 @@ public class WhiteNote implements Comparator<WhiteNote> {
         this.octave = octave;
     }
 
+    public WhiteNote(WhiteNote note) {
+        this.letter = note.getLetter();
+        this.octave = note.getOctave();
+    }
+
     /** Return the distance (in white notes) between this note
      * and note w, i.e.  this - w.  For example, C4 - A4 = 2,
      */

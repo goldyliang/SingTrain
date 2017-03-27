@@ -1213,8 +1213,8 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
      *  If scrollGradually is true, scroll gradually (smooth scrolling)
      *  to the shaded notes.
      */
-    public void ShadeNotes(int currentPulseTime, int prevPulseTime, 
-                           boolean scrollGradually)  {
+    synchronized public void ShadeNotes(int currentPulseTime, int prevPulseTime,
+                           boolean scrollGradually, float pitch) { //}, boolean force)  {
         if (!surfaceReady || staffs == null) {
             return;
         }
@@ -1245,7 +1245,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
         for (Staff staff : staffs) {
             bufferCanvas.translate(0, ypos);
             x_shade = staff.ShadeNotes(bufferCanvas, paint, shade1, 
-                            currentPulseTime, prevPulseTime, x_shade);
+                            currentPulseTime, prevPulseTime, x_shade, pitch); //, force);
             bufferCanvas.translate(0, -ypos);
             ypos += staff.getHeight();
             if (currentPulseTime >= staff.getEndTime()) {
@@ -1269,7 +1269,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
          * we have to call this method again.
          */
         if (scrollX < bufferX || scrollY < bufferY) {
-            ShadeNotes(currentPulseTime, prevPulseTime, scrollGradually);
+            ShadeNotes(currentPulseTime, prevPulseTime, scrollGradually, pitch) ;//, force);
             return;
         }
 
@@ -1480,6 +1480,26 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
         }
         result += "End SheetMusic\n";
         return result;
+    }
+
+    public void setSingPitchHz(float pitchInHz) {
+
+        ShadeNotes((int)player.currentPulseTime,-10, false, pitchInHz);
+
+        /*Staff staff = this.staffs.get(0);
+        if (staff != null) {
+            ChordSymbol chord = staff.getShadedChord();
+            if (chord!=null) {
+
+                if (chord.getSingPitchInHz() < 0 && pitchInHz < 0)
+                    return;
+
+                chord.setSingPitchInHz(pitchInHz);
+
+                //if (player.playstate == player.paused)
+                ShadeNotes((int)player.currentPulseTime,-10, false);
+            }
+        }*/
     }
 
 }

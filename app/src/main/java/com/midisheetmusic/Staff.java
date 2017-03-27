@@ -49,6 +49,8 @@ public class Staff {
     private int endtime;                /** The time (in pulses) of last symbol */
     private int measureLength;          /** The time (in pulses) of a measure */
 
+    private int shadedChordIdx = -1;         /** Index of the current shaded chord **/
+
     /** Create a new staff with the given list of music symbols,
      * and the given key signature.  The clef is determined by
      * the clef of the first chord symbol. The track number is used
@@ -367,13 +369,21 @@ public class Staff {
 
     }
 
+    public ChordSymbol getShadedChord () {
+        if (shadedChordIdx >= 0)
+            return (ChordSymbol)symbols.get(shadedChordIdx);
+        else
+            return null;
+    }
+
 
     /** Shade all the chords played in the given time.
      *  Un-shade any chords shaded in the previous pulse time.
      *  Store the x coordinate location where the shade was drawn.
      */
     public int ShadeNotes(Canvas canvas, Paint paint, int shade,
-                           int currentPulseTime, int prevPulseTime, int x_shade) {
+                           int currentPulseTime, int prevPulseTime, int x_shade, float pitch ) {
+                           //boolean force) {
 
         /* If there's nothing to unshade, or shade, return */
         if ((starttime > prevPulseTime || endtime < prevPulseTime) &&
@@ -387,6 +397,8 @@ public class Staff {
         MusicSymbol curr = null;
         ChordSymbol prevChord = null;
         int prev_xpos = 0;
+
+        shadedChordIdx = -1;
 
         /* Loop through the symbols. 
          * Unshade symbols where start <= prevPulseTime < end
@@ -457,6 +469,17 @@ public class Staff {
                 curr.Draw(canvas, paint, ytop);
                 canvas.translate(-xpos, 0);
                 redrawLines = true;
+
+                if (curr instanceof ChordSymbol) {
+                    if (shadedChordIdx >=0) {
+                        throw new IllegalStateException("Duplicated chord");
+                    }
+                    shadedChordIdx = i;
+                    if (pitch > 0) {
+                        ((ChordSymbol) curr).setSingPitchInHz(pitch);
+                        System.out.println("Shaded:" + shadedChordIdx + ", pitch:" + pitch);
+                    }
+                }
             }
 
             /* If either a gray or white background was drawn, we need to redraw
@@ -496,6 +519,7 @@ public class Staff {
             }
             xpos += curr.getWidth();
         }
+
         return x_shade;
     }
 
