@@ -80,9 +80,9 @@ public class SettingsActivity extends PreferenceActivity
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        getWindow().setBackgroundDrawable(new ColorDrawable(Color.rgb(40, 40, 40)));
-        getListView().setBackgroundColor(Color.TRANSPARENT);
-        getListView().setCacheColorHint(Color.TRANSPARENT);
+        // getWindow().setBackgroundDrawable(new ColorDrawable(Color.rgb(40, 40, 40)));
+        // getListView().setBackgroundColor(Color.TRANSPARENT);
+        // getListView().setCacheColorHint(Color.TRANSPARENT);
         setTitle("MidiSheetMusic: Settings");
         options = (MidiOptions) this.getIntent().getSerializableExtra(settingsID);
         defaultOptions = (MidiOptions) this.getIntent().getSerializableExtra(defaultSettingsID);

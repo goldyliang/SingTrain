@@ -60,11 +60,11 @@ class IconArrayAdapter<T> extends ArrayAdapter<T> {
          }
          TextView text = (TextView)convertView.findViewById(R.id.choose_song_name);
          ImageView image = (ImageView)convertView.findViewById(R.id.choose_song_icon);
-
+         text.setHighlightColor(Color.WHITE);
          FileUri file = (FileUri) this.getItem(position);
          if (file.isDirectory()) {
              image.setImageBitmap(directoryIcon);
-             text.setText(file.filePath());
+             text.setText(file.getUri().getPath());
          }
          else {
              image.setImageBitmap(midiIcon);

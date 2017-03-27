@@ -15,6 +15,7 @@ package com.midisheetmusic;
 import java.io.*;
 import java.util.*;
 import android.app.*;
+import android.net.Uri;
 import android.os.*;
 import android.widget.*;
 import android.util.Log;
@@ -43,7 +44,12 @@ public class FileBrowserActivity extends ListActivity {
         super.onResume();
         rootdir = Environment.getExternalStorageDirectory().getAbsolutePath();
         directoryView = (TextView) findViewById(R.id.directory);
-        loadDirectory(rootdir);
+        SharedPreferences settings = getPreferences(0);
+        String lastBrowsedDirectory = settings.getString("lastBrowsedDirectory", null);
+        if (lastBrowsedDirectory == null) {
+            lastBrowsedDirectory = rootdir;
+        }
+        loadDirectory(lastBrowsedDirectory);
     }
 
     /* Scan the files in the new directory, and store them in the filelist.
@@ -51,18 +57,27 @@ public class FileBrowserActivity extends ListActivity {
      */
     private void loadDirectory(String newdirectory) {
         if (newdirectory.equals("../")) {
-            directory = new File(directory).getParent();
+            try {
+                directory = new File(directory).getParent();
+            }
+            catch (Exception e) {
+            }
         }
         else {
             directory = newdirectory;
         }
+        SharedPreferences.Editor editor = getPreferences(0).edit();
+        editor.putString("lastBrowsedDirectory", directory);
+        editor.commit();
         directoryView.setText(directory);
 
         filelist = new ArrayList<FileUri>();
         ArrayList<FileUri> sortedDirs = new ArrayList<FileUri>();
         ArrayList<FileUri> sortedFiles = new ArrayList<FileUri>();
         if (!newdirectory.equals(rootdir)) {
-            sortedDirs.add(new FileUri("../"));
+            String parentDirectory = new File(directory).getParent() + "/";
+            Uri uri = Uri.parse("file://" + parentDirectory);
+            sortedDirs.add(new FileUri(uri, parentDirectory));
         }
         try {
             File dir = new File(directory);
@@ -74,13 +89,15 @@ public class FileBrowserActivity extends ListActivity {
                     }
                     String filename = file.getName();
                     if (file.isDirectory()) {
-                        FileUri fileuri = new FileUri(file.getAbsolutePath() + "/");
+                        Uri uri = Uri.parse("file://" + file.getAbsolutePath() + "/");
+                        FileUri fileuri = new FileUri(uri, uri.getPath());
                         sortedDirs.add(fileuri);
                     }
                     else if (filename.endsWith(".mid") || filename.endsWith(".MID") ||
                              filename.endsWith(".midi") || filename.endsWith(".MIDI")) {
                         
-                        FileUri fileuri = new FileUri(file.getAbsolutePath());
+                        Uri uri = Uri.parse("file://" + file.getAbsolutePath());
+                        FileUri fileuri = new FileUri(uri, uri.getLastPathSegment());
                         sortedFiles.add(fileuri);
                     }
                 }
@@ -104,55 +121,20 @@ public class FileBrowserActivity extends ListActivity {
 
     /** When a user selects an item:
      * - If it's a directory, load that directory.
-     * - If it's a file, ??
+     * - If it's a file, open the SheetMusicActivity.
      */
     @Override
     protected void onListItemClick(ListView parent, View view, int position, long id) {
         super.onListItemClick(parent, view, position, id);
         FileUri file = (FileUri) this.getListAdapter().getItem(position);
         if (file.isDirectory()) {
-            this.loadDirectory(file.filePath());
+            this.loadDirectory(file.getUri().getPath());
              return;
         }
-        byte[] data = file.getData();
-        if (data == null || data.length <= 6 || !hasMidiHeader(data)) {
-            showErrorDialog("Error: Unable to open song: " + file.toString());
-            return;
+        else {
+            ChooseSongActivity.openFile(file);
         }
-        Intent intent = new Intent(this, SheetMusicActivity.class);
-        intent.putExtra(SheetMusicActivity.MidiDataID, data);
-        intent.putExtra(SheetMusicActivity.MidiTitleID, file.toString());
-        startActivity(intent);
     }  
-
-    /** Return true if the data starts with the header MTrk */
-    boolean hasMidiHeader(byte[] data) {
-        String s;
-        try {
-            s = new String(data, 0, 4, "US-ASCII");
-            if (s.equals("MThd"))
-                return true;
-            else
-                return false;
-        }
-        catch (UnsupportedEncodingException e) {
-            return false;
-        }
-    }
-
-    /** Show an error dialog with the given message */
-    void showErrorDialog(String message) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage(message);
-        builder.setCancelable(false);
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-           public void onClick(DialogInterface dialog, int id) {
-           }
-        });
-        AlertDialog alert = builder.create();
-        alert.show();
-    }
-
 }
 
 

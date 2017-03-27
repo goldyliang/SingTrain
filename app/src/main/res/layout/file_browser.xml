@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
-    android:background="#eeeeee"
+    android:background="#000000"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent">
 
     <TextView
         android:id="@+id/directory"
-        android:textColor="#404040"
-        android:background="#d0d0d0"
+        android:textColor="#f0f0f0"
+        android:background="#000000"
         android:layout_width="fill_parent" 
         android:layout_height="wrap_content" 
         android:layout_marginLeft="10dip"
@@ -19,7 +19,7 @@
 
     <ListView
         android:id="@android:id/list"
-        android:background="#eeeeee"
+        android:background="#000000"
         android:layout_width="fill_parent" 
         android:layout_height="wrap_content" />
 

@@ -67,7 +67,7 @@ public class TimeSignature implements Serializable {
         this.tempo = tempo;
 
         int beat;
-        if (denominator == 2)
+        if (denominator < 4)
             beat = quarternote * 2;
         else
             beat = quarternote / (denominator/4);

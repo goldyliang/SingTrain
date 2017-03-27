@@ -53,18 +53,20 @@ import android.media.*;
  * and determines which notes to shade.
  */
 public class MidiPlayer extends LinearLayout {
-    static Bitmap rewindImage;   /** The rewind image */
-    static Bitmap playImage;     /** The play image */
-    static Bitmap pauseImage;    /** The pause image */
-    static Bitmap stopImage;      /** The stop image */
-    static Bitmap fastFwdImage;  /** The fast forward image */
-    static Bitmap volumeImage;   /** The volume image */
+    static Bitmap rewindImage;           /** The rewind image */
+    static Bitmap playImage;             /** The play image */
+    static Bitmap pauseImage;            /** The pause image */
+    static Bitmap stopImage;             /** The stop image */
+    static Bitmap fastFwdImage;          /** The fast forward image */
+    static Bitmap volumeImage;           /** The volume image */
+    static Bitmap settingsImage;         /** The settings image */
 
-    private ImageButton rewindButton; /** The rewind button */
-    private ImageButton playButton;   /** The play/pause button */
-    private ImageButton stopButton;   /** The stop button */
-    private ImageButton fastFwdButton;/** The fast forward button */
-    private TextView speedText;        /** The "Speed" label */
+    private ImageButton rewindButton;    /** The rewind button */
+    private ImageButton playButton;      /** The play/pause button */
+    private ImageButton stopButton;      /** The stop button */
+    private ImageButton fastFwdButton;   /** The fast forward button */
+    private ImageButton settingsButton;  /** The fast forward button */
+    private TextView speedText;          /** The "Speed %" label */
     private SeekBar speedBar;    /** The seekbar for controlling the playback speed */
 
     int playstate;               /** The playing state of the Midi Player */
@@ -88,7 +90,7 @@ public class MidiPlayer extends LinearLayout {
     double startPulseTime;      /** Time (in pulses) when music started playing */
     double currentPulseTime;    /** Time (in pulses) music is currently at */
     double prevPulseTime;       /** Time (in pulses) music was last at */
-    Context context;            /** The context, for writing midi files */
+    Activity activity;          /** The parent activity. */
 
     
     /** Load the play/pause/stop button images */
@@ -102,16 +104,17 @@ public class MidiPlayer extends LinearLayout {
         pauseImage = BitmapFactory.decodeResource(res, R.drawable.pause);
         stopImage = BitmapFactory.decodeResource(res, R.drawable.stop);
         fastFwdImage = BitmapFactory.decodeResource(res, R.drawable.fastforward);
+        settingsImage = BitmapFactory.decodeResource(res, R.drawable.settings);
     }
 
 
     /** Create a new MidiPlayer, displaying the play/stop buttons, and the
      *  speed bar.  The midifile and sheetmusic are initially null.
      */
-    public MidiPlayer(Context context) {
-        super(context);
-        LoadImages(context);
-        this.context = context;
+    public MidiPlayer(Activity activity) {
+        super(activity);
+        LoadImages(activity);
+        this.activity = activity;
         this.midifile = null;
         this.options = null;
         this.sheet = null;
@@ -123,7 +126,6 @@ public class MidiPlayer extends LinearLayout {
         this.setPadding(0, 0, 0, 0);
         CreateButtons();
 
-        Activity activity = (Activity)context;
         int screenwidth = activity.getWindowManager().getDefaultDisplay().getWidth();
         int screenheight = activity.getWindowManager().getDefaultDisplay().getHeight();
         Point newsize = MidiPlayer.getPreferredSize(screenwidth, screenheight);
@@ -170,7 +172,7 @@ public class MidiPlayer extends LinearLayout {
         this.setOrientation(LinearLayout.HORIZONTAL);
 
         /* Create the rewind button */
-        rewindButton = new ImageButton(context);
+        rewindButton = new ImageButton(activity);
         rewindButton.setBackgroundColor(Color.BLACK);
         rewindButton.setImageBitmap(rewindImage);
         rewindButton.setScaleType(ImageView.ScaleType.FIT_XY);
@@ -182,7 +184,7 @@ public class MidiPlayer extends LinearLayout {
         this.addView(rewindButton);
 
         /* Create the stop button */
-        stopButton = new ImageButton(context);
+        stopButton = new ImageButton(activity);
         stopButton.setBackgroundColor(Color.BLACK);
         stopButton.setImageBitmap(stopImage);
         stopButton.setScaleType(ImageView.ScaleType.FIT_XY);
@@ -195,7 +197,7 @@ public class MidiPlayer extends LinearLayout {
 
         
         /* Create the play button */
-        playButton = new ImageButton(context);
+        playButton = new ImageButton(activity);
         playButton.setBackgroundColor(Color.BLACK);
         playButton.setImageBitmap(playImage);
         playButton.setScaleType(ImageView.ScaleType.FIT_XY);
@@ -207,7 +209,7 @@ public class MidiPlayer extends LinearLayout {
         this.addView(playButton);        
         
         /* Create the fastFwd button */        
-        fastFwdButton = new ImageButton(context);
+        fastFwdButton = new ImageButton(activity);
         fastFwdButton.setBackgroundColor(Color.BLACK);
         fastFwdButton.setImageBitmap(fastFwdImage);
         fastFwdButton.setScaleType(ImageView.ScaleType.FIT_XY);
@@ -220,15 +222,36 @@ public class MidiPlayer extends LinearLayout {
 
 
         /* Create the Speed bar */
-        speedText = new TextView(context);
-        speedText.setText("   Speed:    ");
+        speedText = new TextView(activity);
+        speedText.setText("   Speed: 100%   ");
         speedText.setGravity(Gravity.CENTER);
         this.addView(speedText);
 
-        speedBar = new SeekBar(context);
-        speedBar.setMax(100);
+        speedBar = new SeekBar(activity);
+        speedBar.setMax(150);
         speedBar.setProgress(100);
+        speedBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
+                speedText.setText("   Speed: " + String.format(Locale.US, "%03d", progress) + "%   ");
+            }
+            public void onStartTrackingTouch(SeekBar bar) {
+            }
+            public void onStopTrackingTouch(SeekBar bar) {
+            }
+        });
         this.addView(speedBar);
+
+        /* Create the settings button */        
+        settingsButton = new ImageButton(activity);
+        settingsButton.setBackgroundColor(Color.BLACK);
+        settingsButton.setImageBitmap(settingsImage);
+        settingsButton.setScaleType(ImageView.ScaleType.FIT_XY);
+        settingsButton.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                activity.openOptionsMenu();
+            }
+        });
+        this.addView(settingsButton);
 
         /* Initialize the timer used for playback, but don't start
          * the timer yet (enabled = false).
@@ -243,6 +266,7 @@ public class MidiPlayer extends LinearLayout {
         stopButton.setPadding(pad, pad, pad, pad);
         playButton.setPadding(pad, pad, pad, pad);
         fastFwdButton.setPadding(pad, pad, pad, pad);
+        settingsButton.setPadding(pad, pad, pad, pad);
 
         LinearLayout.LayoutParams params;
         
@@ -270,15 +294,21 @@ public class MidiPlayer extends LinearLayout {
         params.height = buttonheight;
         speedText.setLayoutParams(params);
         
-        params = new LinearLayout.LayoutParams(buttonheight * 6, buttonheight);
-        params.width = buttonheight * 6;
+        params = new LinearLayout.LayoutParams(buttonheight * 5, buttonheight);
+        params.width = buttonheight * 5;
         params.bottomMargin = 0;
         params.leftMargin = 0;
         params.topMargin = 0;
         params.rightMargin = 0;
         speedBar.setLayoutParams(params);
         speedBar.setPadding(pad, pad, pad, pad);
-        
+
+        params = new LinearLayout.LayoutParams(buttonheight, buttonheight);
+        params.bottomMargin = 0;
+        params.topMargin = 0;
+        params.rightMargin = 0;
+        params.leftMargin = buttonheight/8;
+        settingsButton.setLayoutParams(params);
     }
     
     public void SetPiano(Piano p) {
@@ -296,7 +326,7 @@ public class MidiPlayer extends LinearLayout {
         if ((file == midifile && midifile != null && playstate == paused)) {
             options = opt;
             sheet = s;
-            sheet.ShadeNotes((int)currentPulseTime, (int)-1, false, -1);
+            sheet.ShadeNotes((int)currentPulseTime, (int)-1, SheetMusic.DontScroll, -1);
 
             /* We have to wait some time (200 msec) for the sheet music
              * to scroll and redraw, before we can re-shade.
@@ -316,7 +346,7 @@ public class MidiPlayer extends LinearLayout {
     Runnable ReShade = new Runnable() {
       public void run() {
         if (playstate == paused || playstate == stopped) {
-            sheet.ShadeNotes((int)currentPulseTime, (int)-10, false, -1);
+            sheet.ShadeNotes((int)currentPulseTime, (int)-10, SheetMusic.ImmediateScroll, -1);
             piano.ShadeNotes((int)currentPulseTime, (int)prevPulseTime);
         }
       }
@@ -348,20 +378,20 @@ public class MidiPlayer extends LinearLayout {
         pulsesPerMsec = midifile.getTime().getQuarter() * (1000.0 / options.tempo);
 
         try {
-            FileOutputStream dest = context.openFileOutput(tempSoundFile, Context.MODE_PRIVATE);
+            FileOutputStream dest = activity.openFileOutput(tempSoundFile, Context.MODE_PRIVATE);
             midifile.ChangeSound(dest, options);
             dest.close();
             // checkFile(tempSoundFile);
         }
         catch (IOException e) {
-            Toast toast = Toast.makeText(context, "Error: Unable to create MIDI file for playing.", Toast.LENGTH_LONG);
+            Toast toast = Toast.makeText(activity, "Error: Unable to create MIDI file for playing.", Toast.LENGTH_LONG);
             toast.show();
         }
     }
 
     private void checkFile(String name) {
         try {
-            FileInputStream in = context.openFileInput(name);
+            FileInputStream in = activity.openFileInput(name);
             byte[] data = new byte[4096];
             int total = 0, len = 0;
             while (true) {
@@ -373,7 +403,7 @@ public class MidiPlayer extends LinearLayout {
             } 
             in.close();
             data = new byte[total];
-            in = context.openFileInput(name);
+            in = activity.openFileInput(name);
             int offset = 0;
             while (offset < total) {
                 len = in.read(data, offset, total - offset);
@@ -384,11 +414,11 @@ public class MidiPlayer extends LinearLayout {
             MidiFile testmidi = new MidiFile(data, name); 
         }
         catch (IOException e) {
-            Toast toast = Toast.makeText(context, "CheckFile: " + e.toString(), Toast.LENGTH_LONG);
+            Toast toast = Toast.makeText(activity, "CheckFile: " + e.toString(), Toast.LENGTH_LONG);
             toast.show();
         }
         catch (MidiFileException e) {
-            Toast toast = Toast.makeText(context, "CheckFile midi: " + e.toString(), Toast.LENGTH_LONG);
+            Toast toast = Toast.makeText(activity, "CheckFile midi: " + e.toString(), Toast.LENGTH_LONG);
             toast.show();
         } 
     }
@@ -399,7 +429,7 @@ public class MidiPlayer extends LinearLayout {
         if (player == null)
             return;
         try {
-            FileInputStream input = context.openFileInput(filename);
+            FileInputStream input = activity.openFileInput(filename);
             player.reset();
             player.setDataSource(input.getFD());
             input.close();
@@ -407,7 +437,7 @@ public class MidiPlayer extends LinearLayout {
             player.start();
         }
         catch (IOException e) {
-            Toast toast = Toast.makeText(context, "Error: Unable to play MIDI sound", Toast.LENGTH_LONG);
+            Toast toast = Toast.makeText(activity, "Error: Unable to play MIDI sound", Toast.LENGTH_LONG);
             toast.show();
         }
     }
@@ -442,7 +472,6 @@ public class MidiPlayer extends LinearLayout {
 
     Runnable DoPlay = new Runnable() {
       public void run() {
-        Activity activity = (Activity)context;
         activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         /* The startPulseTime is the pulse time of the midi file when
@@ -480,7 +509,7 @@ public class MidiPlayer extends LinearLayout {
         timer.removeCallbacks(ReShade);
         timer.postDelayed(TimerCallback, callbackDelay);
 
-        sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, true, -1);
+        sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, SheetMusic.GradualScroll, -1);
         piano.ShadeNotes((int)currentPulseTime, (int)prevPulseTime);
         return;
       }
@@ -498,7 +527,6 @@ public class MidiPlayer extends LinearLayout {
         this.requestLayout();
         this.invalidate();
 
-        Activity activity = (Activity)context;
         activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         
         if (midifile == null || sheet == null || numberTracks() == 0) {
@@ -537,8 +565,8 @@ public class MidiPlayer extends LinearLayout {
     void DoStop() { 
         playstate = stopped;
         timer.removeCallbacks(TimerCallback);
-        sheet.ShadeNotes(-10, (int)prevPulseTime, false, -1);
-        sheet.ShadeNotes(-10, (int)currentPulseTime, false, -1);
+        sheet.ShadeNotes(-10, (int)prevPulseTime, SheetMusic.DontScroll, -1);
+        sheet.ShadeNotes(-10, (int)currentPulseTime, SheetMusic.DontScroll, -1);
         piano.ShadeNotes(-10, (int)prevPulseTime);
         piano.ShadeNotes(-10, (int)currentPulseTime);
         startPulseTime = 0;
@@ -560,7 +588,7 @@ public class MidiPlayer extends LinearLayout {
         }
 
         /* Remove any highlighted notes */
-        sheet.ShadeNotes(-10, (int)currentPulseTime, false, -1);
+        sheet.ShadeNotes(-10, (int)currentPulseTime, SheetMusic.DontScroll, -1);
         piano.ShadeNotes(-10, (int)currentPulseTime);
    
         prevPulseTime = currentPulseTime; 
@@ -568,7 +596,7 @@ public class MidiPlayer extends LinearLayout {
         if (currentPulseTime < options.shifttime) {
             currentPulseTime = options.shifttime;
         }
-        sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, false, -1);
+        sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, SheetMusic.ImmediateScroll, -1);
         piano.ShadeNotes((int)currentPulseTime, (int)prevPulseTime);
     }
     
@@ -588,7 +616,7 @@ public class MidiPlayer extends LinearLayout {
         playstate = paused;
 
         /* Remove any highlighted notes */
-        sheet.ShadeNotes(-10, (int)currentPulseTime, false, -1);
+        sheet.ShadeNotes(-10, (int)currentPulseTime, SheetMusic.DontScroll, -1);
         piano.ShadeNotes(-10, (int)currentPulseTime);
    
         prevPulseTime = currentPulseTime; 
@@ -596,7 +624,35 @@ public class MidiPlayer extends LinearLayout {
         if (currentPulseTime > midifile.getTotalPulses()) {
             currentPulseTime -= midifile.getTime().getMeasure();
         }
-        sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, false, -1);
+        sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, SheetMusic.ImmediateScroll, -1);
+        piano.ShadeNotes((int)currentPulseTime, (int)prevPulseTime);
+    }
+
+
+    /** Move the current position to the location clicked.
+     *  The music must be in the paused/stopped state.
+     *  When we resume in playPause, we start at the currentPulseTime.
+     *  So, set the currentPulseTime to the position clicked.
+     */
+    public void MoveToClicked(int x, int y) {
+        if (midifile == null || sheet == null) {
+            return;
+        }
+        if (playstate != paused && playstate != stopped) {
+            return;
+        }
+        playstate = paused;
+
+        /* Remove any highlighted notes */
+        sheet.ShadeNotes(-10, (int)currentPulseTime, SheetMusic.DontScroll, -1);
+        piano.ShadeNotes(-10, (int)currentPulseTime);
+
+        currentPulseTime = sheet.PulseTimeForPoint(new Point(x, y));
+        prevPulseTime = currentPulseTime - midifile.getTime().getMeasure();
+        if (currentPulseTime > midifile.getTotalPulses()) {
+            currentPulseTime -= midifile.getTime().getMeasure();
+        }
+        sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, SheetMusic.DontScroll, -1);
         piano.ShadeNotes((int)currentPulseTime, (int)prevPulseTime);
     }
 
@@ -639,7 +695,7 @@ public class MidiPlayer extends LinearLayout {
                 DoStop();
                 return;
             }
-            sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, true, -1);
+            sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, SheetMusic.GradualScroll, -1);
             piano.ShadeNotes((int)currentPulseTime, (int)prevPulseTime);
             timer.postDelayed(TimerCallback, callbackDelay);
             return;
@@ -650,7 +706,7 @@ public class MidiPlayer extends LinearLayout {
 
             prevPulseTime = currentPulseTime;
             currentPulseTime = startPulseTime + msec * pulsesPerMsec;
-            sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, false, -1);
+            sheet.ShadeNotes((int)currentPulseTime, (int)prevPulseTime, SheetMusic.ImmediateScroll, -1);
             piano.ShadeNotes((int)currentPulseTime, (int)prevPulseTime);
             playstate = paused;
             timer.postDelayed(ReShade, 1000);
@@ -667,7 +723,7 @@ public class MidiPlayer extends LinearLayout {
     private void RestartPlayMeasuresInLoop() {
         playstate = stopped;
         piano.ShadeNotes(-10, (int)prevPulseTime);
-        sheet.ShadeNotes(-10, (int)prevPulseTime, false, -1);
+        sheet.ShadeNotes(-10, (int)prevPulseTime, SheetMusic.DontScroll, -1);
         currentPulseTime = 0;
         prevPulseTime = -1;
         StopSound();

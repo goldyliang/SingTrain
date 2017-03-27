@@ -50,7 +50,6 @@ public class Staff {
     private int measureLength;          /** The time (in pulses) of a measure */
 
     private int shadedChordIdx = -1;         /** Index of the current shaded chord **/
-
     /** Create a new staff with the given list of music symbols,
      * and the given key signature.  The clef is determined by
      * the clef of the first chord symbol. The track number is used
@@ -131,9 +130,12 @@ public class Staff {
         }
         above = Math.max(above, clefsym.getAboveStaff());
         below = Math.max(below, clefsym.getBelowStaff());
+        if (showMeasures) {
+            above = Math.max(above, SheetMusic.NoteHeight * 3);
+        }
         ytop = above + SheetMusic.NoteHeight;
         height = SheetMusic.NoteHeight*5 + ytop + below;
-        if (showMeasures || lyrics != null) {
+        if (lyrics != null) {
             height += SheetMusic.NoteHeight * 3/2;
         }
 
@@ -268,13 +270,13 @@ public class Staff {
     private void DrawMeasureNumbers(Canvas canvas, Paint paint) {
         /* Skip the left side Clef symbol and key signature */
         int xpos = keysigWidth;
-        int ypos = height - SheetMusic.NoteHeight;
+        int ypos = ytop - SheetMusic.NoteHeight * 3;
 
         for (MusicSymbol s : symbols) {
             if (s instanceof BarSymbol) {
                 int measure = 1 + s.getStartTime() / measureLength;
                 canvas.drawText("" + measure,
-                                xpos + SheetMusic.NoteWidth,
+                                xpos + SheetMusic.NoteWidth/2,
                                 ypos,
                                 paint);
             }
@@ -376,7 +378,6 @@ public class Staff {
             return null;
     }
 
-
     /** Shade all the chords played in the given time.
      *  Un-shade any chords shaded in the previous pulse time.
      *  Store the x coordinate location where the shade was drawn.
@@ -397,7 +398,6 @@ public class Staff {
         MusicSymbol curr = null;
         ChordSymbol prevChord = null;
         int prev_xpos = 0;
-
         shadedChordIdx = -1;
 
         /* Loop through the symbols. 
@@ -469,7 +469,6 @@ public class Staff {
                 curr.Draw(canvas, paint, ytop);
                 canvas.translate(-xpos, 0);
                 redrawLines = true;
-
                 if (curr instanceof ChordSymbol) {
                     if (shadedChordIdx >=0) {
                         throw new IllegalStateException("Duplicated chord");
@@ -519,9 +518,27 @@ public class Staff {
             }
             xpos += curr.getWidth();
         }
-
         return x_shade;
     }
+
+    /** Return the pulse time corresponding to the given point.
+     *  Find the notes/symbols corresponding to the x position,
+     *  and return the startTime (pulseTime) of the symbol.
+     */
+    public int PulseTimeForPoint(Point point) {
+
+        int xpos = keysigWidth;
+        int pulseTime = starttime;
+        for (MusicSymbol sym : symbols) {
+            pulseTime = sym.getStartTime();
+            if (point.x <= xpos + sym.getWidth()) {
+                return pulseTime;
+            }
+            xpos += sym.getWidth();
+        }
+        return pulseTime;
+    }
+
 
     @Override
     public String toString() {

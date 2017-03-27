@@ -65,6 +65,7 @@ public class MidiTrack {
                 instrument = mevent.Instrument;
             }
             else if (mevent.Metaevent == MidiFile.MetaEventLyric) {
+                AddLyric(mevent);
                 if (lyrics == null) {
                     lyrics = new ArrayList<MidiEvent>();
                 }
@@ -110,6 +111,14 @@ public class MidiTrack {
                 return;
             }
         }
+    }
+
+    /** Add a lyric event to this track */
+    public void AddLyric(MidiEvent mevent) { 
+        if (lyrics == null) {
+            lyrics = new ArrayList<MidiEvent>();
+        }
+        lyrics.add(mevent);
     }
 
     /** Return a deep copy clone of this MidiTrack. */

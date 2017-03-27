@@ -84,7 +84,7 @@ public class KeySignature {
         this.num_flats = num_flats;
 
         CreateAccidentalMaps();
-        keymap = new Accid[129];
+        keymap = new Accid[160];
         ResetKeyMap();
         CreateSymbols();
     }
@@ -110,7 +110,7 @@ public class KeySignature {
         }
         
         CreateAccidentalMaps();
-        keymap = new Accid[129];
+        keymap = new Accid[160];
         ResetKeyMap();
         CreateSymbols();
     }
@@ -327,7 +327,7 @@ public class KeySignature {
         else
             key = sharpkeys[num_sharps];
 
-        for (int notenumber = 0; notenumber < 128; notenumber++) {
+        for (int notenumber = 0; notenumber < keymap.length; notenumber++) {
             keymap[notenumber] = key[NoteScale.FromNumber(notenumber)];
         }
     }

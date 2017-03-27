@@ -15,6 +15,7 @@ package com.midisheetmusic;
 import java.io.*;
 import java.net.*;
 import android.app.*;
+import android.net.Uri;
 import android.os.*;
 import android.util.*;
 import android.widget.*;
@@ -23,11 +24,9 @@ import android.graphics.*;
 import android.content.*;
 import android.content.res.*;
 import android.media.*;
-
+import java.util.zip.CRC32;
 import com.singtrain.TrainDetectListener;
 import com.singtrain.TrainDetector;
-
-import java.util.zip.CRC32;
 
 import edu.cmu.pocketsphinx.Assets;
 
@@ -41,7 +40,6 @@ import edu.cmu.pocketsphinx.Assets;
  */
 public class SheetMusicActivity extends Activity implements TrainDetectListener {
 
-    public static final String MidiDataID = "MidiDataID";
     public static final String MidiTitleID = "MidiTitleID";
     public static final int settingsRequestCode = 1;
     
@@ -53,11 +51,12 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
     private MidiOptions options; /* The options for sheet music and sound */
     private long midiCRC;      /* CRC of the midi bytes */
 
-    private TrainDetector detector;
+	private TrainDetector detector;
 
-     /** Create this SheetMusicActivity.  The Intent should have two parameters:
+     /** Create this SheetMusicActivity.  
+      * The Intent should have two parameters:
+      * - data: The uri of the midi file to open.
       * - MidiTitleID: The title of the song (String)
-      * - MidiDataID: The raw byte[] data of the midi file.
       */
     @Override
     public void onCreate(Bundle state) {
@@ -68,10 +67,16 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
         MidiPlayer.LoadImages(this);
 
         // Parse the MidiFile from the raw bytes
-        byte[] data = this.getIntent().getByteArrayExtra(MidiDataID);
+        Uri uri = this.getIntent().getData();
         String title = this.getIntent().getStringExtra(MidiTitleID);
+        if (title == null) {
+            title = uri.getLastPathSegment();
+        }
+        FileUri file = new FileUri(uri, title);
         this.setTitle("MidiSheetMusic: " + title);
+        byte[] data;
         try {
+            data = file.getData(this);
             midifile = new MidiFile(data, title);
         }
         catch (MidiFileException e) {
@@ -89,6 +94,7 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
         options.scrollVert = settings.getBoolean("scrollVert", false);
         options.shade1Color = settings.getInt("shade1Color", options.shade1Color);
         options.shade2Color = settings.getInt("shade2Color", options.shade2Color);
+        options.showPiano = settings.getBoolean("showPiano", true);
         String json = settings.getString("" + midiCRC, null);
         MidiOptions savedOptions = MidiOptions.fromJson(json);
         if (savedOptions != null) {
@@ -96,7 +102,6 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
         }
         createView();
         createSheetMusic(options);
-
         detector = new TrainDetector();
 
         try {
@@ -274,6 +279,17 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
             AlertDialog alert = builder.create();
             alert.show();
         }
+        catch (NullPointerException e) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            builder.setMessage("Ran out of memory while saving image to file " + Environment.DIRECTORY_PICTURES + "/MidiSheetMusic/" + filename  + ".png");
+            builder.setCancelable(false);
+            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                public void onClick(DialogInterface dialog, int id) {
+                }
+            });
+            AlertDialog alert = builder.create();
+            alert.show();
+        }
     }
 
 
@@ -305,11 +321,11 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
             }
         }
         // Save the options. 
-        SharedPreferences settings = getPreferences(0);
-        SharedPreferences.Editor editor = settings.edit();
+        SharedPreferences.Editor editor = getPreferences(0).edit();
         editor.putBoolean("scrollVert", options.scrollVert);
         editor.putInt("shade1Color", options.shade1Color);
         editor.putInt("shade2Color", options.shade2Color);
+        editor.putBoolean("showPiano", options.showPiano);
         String json = options.toJson();
         if (json != null) {
             editor.putString("" + midiCRC, json);

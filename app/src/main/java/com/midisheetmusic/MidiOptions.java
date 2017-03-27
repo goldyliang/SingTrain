@@ -77,6 +77,7 @@ public class MidiOptions implements Serializable {
             mute[i] = false;
             if (midifile.getTracks().get(i).getInstrumentName().equals("Percussion")) {
                 tracks[i] = false;
+                mute[i] = true;
             }
         }
         useDefaultInstruments = true;
@@ -84,7 +85,7 @@ public class MidiOptions implements Serializable {
         for (int i = 0; i < instruments.length; i++) {
             instruments[i] = midifile.getTracks().get(i).getInstrument();
         }
-        scrollVert = false;
+        scrollVert = true;
         largeNoteSize = true;
         if (tracks.length != 2) {
             twoStaffs = true;
@@ -176,7 +177,6 @@ public class MidiOptions implements Serializable {
         MidiOptions options = new MidiOptions();
         try {
             JSONObject json = new JSONObject(jsonString);
-
             JSONArray jsonTracks = json.getJSONArray("tracks");
             options.tracks = new boolean[jsonTracks.length()];
             for (int i = 0; i < options.tracks.length; i++) {

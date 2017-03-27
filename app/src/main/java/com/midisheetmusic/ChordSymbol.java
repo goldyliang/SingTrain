@@ -41,7 +41,6 @@ public class ChordSymbol implements MusicSymbol {
     private final static int COLOR_LOW = Color.BLUE;
     private final static int COLOR_GOOD = Color.GREEN;
 
-
     /** Create a new Chord Symbol from the given list of midi notes.
      * All the midi notes will have the same start time.  Use the
      * key signature to get the white key and accidental symbol for
@@ -518,7 +517,6 @@ public class ChordSymbol implements MusicSymbol {
         return xpos;
     }
 
-
     /** Draw the black circle notes.
      * @param ytop The ylocation (in pixels) where the top of the staff starts.
      * @param topstaff The white note of the top of the staff.
@@ -624,7 +622,6 @@ public class ChordSymbol implements MusicSymbol {
 
         }
     }
-
     public void DrawSingingNote(Canvas canvas, Paint paint, int ytop, WhiteNote topstaff) {
         if (singPitchInHz <= 0)
             return;
@@ -761,8 +758,6 @@ public class ChordSymbol implements MusicSymbol {
         }
         /* End drawing horizontal lines */
     }
-
-
 
     /** Draw the note letters (A, A#, Bb, etc) next to the note circles.
      * @param ytop The y location (in pixels) where the top of the staff starts.

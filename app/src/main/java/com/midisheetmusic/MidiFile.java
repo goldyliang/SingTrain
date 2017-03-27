@@ -193,6 +193,7 @@ class PairInt {
  */
 
 public class MidiFile {
+    private FileUri fileuri;          /** The file reference */
     private String filename;          /** The Midi file name */
     private ArrayList<ArrayList<MidiEvent>> allevents; /** The raw MidiEvents, one list per track */
     private ArrayList<MidiTrack> tracks ;  /** The tracks of the midifile that have notes */
@@ -570,7 +571,7 @@ public class MidiFile {
                 eventflag = file.ReadByte();
             }
 
-            //Log.e("madhav", "offset " + startoffset + 
+            //Log.e("debug",  "offset " + startoffset + 
             //                " event " + eventflag + " " + EventName(eventflag) +
             //                " start " + starttime + " delta " + mevent.DeltaTime);
 
@@ -774,7 +775,7 @@ public class MidiFile {
     WriteEvents(FileOutputStream file, ArrayList<ArrayList<MidiEvent>> allevents, 
                   int trackmode, int quarter) throws IOException {
 
-        byte[] buf = new byte[4096];
+        byte[] buf = new byte[16384];
 
         /* Write the MThd, len = 6, track mode, number tracks, quarter note */
         file.write("MThd".getBytes("US-ASCII"), 0, 4);
@@ -1644,6 +1645,16 @@ public class MidiFile {
                 result.add(track);
             }
         }
+        ArrayList<MidiEvent> lyrics = origtrack.getLyrics(); 
+        if (lyrics != null) {
+            for (MidiEvent lyricEvent : lyrics) {
+                for (MidiTrack track : result) {
+                    if (lyricEvent.Channel == track.getNotes().get(0).getChannel() ) {
+                        track.AddLyric(lyricEvent);
+                    }
+                }
+            }
+        }
         return result;
     }
 
@@ -1720,6 +1731,21 @@ public class MidiFile {
             }
         }
         return false;
+    }
+
+    /** Return true if the data starts with the header MTrk */
+    public static boolean hasMidiHeader(byte[] data) {
+        String s;
+        try {
+            s = new String(data, 0, 4, "US-ASCII");
+            if (s.equals("MThd"))
+                return true;
+            else
+                return false;
+        }
+        catch (UnsupportedEncodingException e) {
+            return false;
+        }
     }
 
 

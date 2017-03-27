@@ -18,6 +18,7 @@ import android.app.*;
 import android.content.*;
 import android.graphics.*;
 import android.os.*;
+import android.util.Log;
 import android.view.*;
 import android.view.animation.AnimationUtils;
 
@@ -40,23 +41,24 @@ class BoxedInt {
  * shadeNotes()
  *   Shade all the notes played at a given pulse time.
  */
-public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
+public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, ScrollAnimationListener {
 
     /* Measurements used when drawing.  All measurements are in pixels. */
     public static final int LineWidth  = 1;   /** The width of a line */
     public static final int LeftMargin = 4;   /** The left margin */
     public static final int LineSpace  = 7;   /** The space between lines in the staff */
-    public static final int StaffHeight = LineSpace*4 + LineWidth*5;  
-                                  /** The height between the 5 horizontal lines of the staff */
+    public static final int StaffHeight = LineSpace*4 + LineWidth*5;  /** The height between the 5 horizontal lines of the staff */
 
-    public static final int NoteHeight = LineSpace + LineWidth; 
-                                  /** The height of a whole note */
-    public static final int NoteWidth = 3 * LineSpace/2;  
-                                  /** The width of a whole note */
+    public static final int NoteHeight = LineSpace + LineWidth; /** The height of a whole note */
+    public static final int NoteWidth = 3 * LineSpace/2;        /** The width of a whole note */
 
     public static final int PageWidth = 800;    /** The width of each page */
     public static final int PageHeight = 1050;  /** The height of each page (when printing) */
     public static final int TitleHeight = 14;   /** Height of title on first page */
+
+    public static final int ImmediateScroll = 1;
+    public static final int GradualScroll   = 2;
+    public static final int DontScroll      = 3;
 
     private ArrayList<Staff> staffs;  /** The array of staffs to display (from top to bottom) */
     private KeySignature mainkey;     /** The main key signature */
@@ -88,13 +90,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
     private int      bufferY; 
     private int      scrollX;         /** The (left,top) of the scroll clip */
     private int      scrollY;
-    private int      startMotionX;    /** The x pixel when a touch motion starts */
-    private int      startMotionY;    /** The y pixel when a touch motion starts */
-    private float    deltaX;          /** The change in x-pixel of the last motion */
-    private float    deltaY;          /** The change in y-pixel of the last motion */
-    private boolean  inMotion;        /** True if we're in a motion event */
-    private long     lastMotionTime;  /** Time of the last motion event (millsec) */      
-    private Handler  scrollTimer;     /** Timer for doing 'fling' scrolling */
+    private ScrollAnimation scrollAnimation;
 
     public SheetMusic(Context context) {
         super(context);
@@ -106,7 +102,6 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
         screenwidth = activity.getWindowManager().getDefaultDisplay().getWidth();
         screenheight = activity.getWindowManager().getDefaultDisplay().getHeight();
         playerHeight = MidiPlayer.getPreferredSize(screenwidth, screenheight).y;
-        scrollTimer = new Handler();
     }
 
     /** Create a new SheetMusic View.
@@ -123,12 +118,14 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
         if (options == null) {
             options = new MidiOptions(file);
         }
-        zoom = 1.0f;/// 4.0f;//1.0f;
+        zoom = 1.0f;
 
         filename = file.getFileName();
         SetColors(null, options.shade1Color, options.shade2Color);
         paint = new Paint();
-        paint.setTextSize(10.0f);
+        paint.setTextSize(12.0f);
+        Typeface typeface = Typeface.create(paint.getTypeface(), Typeface.NORMAL);
+        paint.setTypeface(typeface);
         paint.setColor(Color.BLACK);
         
         ArrayList<MidiTrack> tracks = file.ChangeMidiNotes(options);
@@ -172,7 +169,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
 
         /* Vertically align the music symbols */
         SymbolWidths widths = new SymbolWidths(allsymbols, lyrics);
-        AlignSymbols(allsymbols, widths);
+        AlignSymbols(allsymbols, widths, options);
 
         staffs = CreateStaffs(allsymbols, mainkey, options, time.getMeasure());
         CreateAllBeamedChords(allsymbols, time);
@@ -186,7 +183,9 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
         for (Staff staff : staffs) {
             staff.CalculateHeight();
         }
-        zoom = 1.0f;// / 4.0f; //1.0f;
+        zoom = 1.0f;
+
+        scrollAnimation = new ScrollAnimation(this, scrollVert);
     }
 
     /** Calculate the size of the sheet music width and height
@@ -249,17 +248,14 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
         }
         else {
             zoom = (float)( (newheight + playerHeight) * 1.0 / sheetheight);
-            if (zoom < 0.75)
-                zoom = 0.75f;
+            if (zoom < 0.9)
+                zoom = 0.9f;
             if (zoom > 1.1)
                 zoom = 1.1f;
         }
         if (bufferCanvas == null) {
             createBufferCanvas();
         }
-
-        //zoom = zoom * 4;
-
         callOnDraw();
     }
     
@@ -499,7 +495,19 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
      * starttime.
      */
     private
-    void AlignSymbols(ArrayList<ArrayList<MusicSymbol>> allsymbols, SymbolWidths widths) {
+    void AlignSymbols(ArrayList<ArrayList<MusicSymbol>> allsymbols, SymbolWidths widths, MidiOptions options) {
+
+        // If we show measure numbers, increase bar symbol width
+        if (options.showMeasures) {
+            for (int track = 0; track < allsymbols.size(); track++) {
+                ArrayList<MusicSymbol> symbols = allsymbols.get(track);
+                for (MusicSymbol sym : symbols) {
+                    if (sym instanceof BarSymbol) {
+                        sym.setWidth( sym.getWidth() + NoteWidth);
+                    }
+                }
+            }
+        }
 
         for (int track = 0; track < allsymbols.size(); track++) {
             ArrayList<MusicSymbol> symbols = allsymbols.get(track);
@@ -1056,11 +1064,9 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
         int topmargin = 20;
         String title = filename;
         title = title.replace(".mid", "").replace("_", " ");
-        paint.setTextSize(12.0f);
         canvas.translate(leftmargin, topmargin);
         canvas.drawText(title, 0, 0, paint);
         canvas.translate(-leftmargin, -topmargin);
-        paint.setTextSize(10.0f);
     }
 
     /**
@@ -1109,10 +1115,10 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
     {
         int leftmargin = 20;
         int topmargin = 20;
-        int rightmargin = 20;
-        int bottommargin = 20;
+        //int rightmargin = 20;
+        //int bottommargin = 20;
 
-        float scale = 1.0f;
+        //float scale = 1.0f;
         Rect clip = new Rect(0, 0, PageWidth + 40, PageHeight + 40);
 
         paint.setAntiAlias(true);
@@ -1213,8 +1219,8 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
      *  If scrollGradually is true, scroll gradually (smooth scrolling)
      *  to the shaded notes.
      */
-    synchronized public void ShadeNotes(int currentPulseTime, int prevPulseTime,
-                           boolean scrollGradually, float pitch) { //}, boolean force)  {
+    synchronized public void ShadeNotes(int currentPulseTime, int prevPulseTime, 
+			int scrollType, float pitch) {
         if (!surfaceReady || staffs == null) {
             return;
         }
@@ -1262,14 +1268,21 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
             x_shade = (int)(x_shade * zoom);
             y_shade -= NoteHeight;
             y_shade = (int)(y_shade * zoom);
-            ScrollToShadedNotes(x_shade, y_shade, scrollGradually);
+            if (scrollType == ImmediateScroll) {
+                ScrollToShadedNotes(x_shade, y_shade, false);
+            }
+            else if (scrollType == GradualScroll) {
+                ScrollToShadedNotes(x_shade, y_shade, true);
+            }
+            else if (scrollType == DontScroll) {
+            }
         }
 
         /* If the new scrollX, scrollY is not in the buffer,
          * we have to call this method again.
          */
         if (scrollX < bufferX || scrollY < bufferY) {
-            ShadeNotes(currentPulseTime, prevPulseTime, scrollGradually, pitch) ;//, force);
+            ShadeNotes(currentPulseTime, prevPulseTime, scrollType, pitch);
             return;
         }
 
@@ -1322,6 +1335,24 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
         checkScrollBounds();
     }
 
+    /** Return the pulseTime corresponding to the given point on the SheetMusic.
+     *  First, find the staff corresponding to the point.
+     *  Then, within the staff, find the notes/symbols corresponding to the point,
+     *  and return the StartTime (pulseTime) of the symbols.
+     */
+    public int PulseTimeForPoint(Point point) {
+        Point scaledPoint = new Point((int)(point.x / zoom), (int)(point.y / zoom));
+        int y = 0;
+        for (Staff staff : staffs) {
+            if (scaledPoint.y >= y && scaledPoint.y <= y + staff.getHeight()) {
+                return staff.PulseTimeForPoint(scaledPoint);
+            }
+            y += staff.getHeight();
+        }
+        return -1;
+    }
+
+
     /** Check that the scrollX/scrollY position does not exceed
      *  the bounds of the sheet music.
      */
@@ -1347,111 +1378,46 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
     }
 
 
-    /** Handle touch/motion events to implement scrolling the sheet music.
-     *  - On down touch, store the (x,y) of the touch
-     *  - On a motion event, calculate the delta (change) in x, y.
-     *    Update the scrolX, scrollY and redraw the sheet music.
-     *  - On a up touch, implement a 'fling'.  Call flingScroll 
-     *    every 50 msec for the next 2 seconds.
-     */
+    /** Handle touch/motion events to implement scrolling the sheet music. */
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         int action = event.getAction() & MotionEvent.ACTION_MASK;
+        boolean result = scrollAnimation.onTouchEvent(event);
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                deltaX = deltaY = 0;
-                scrollTimer.removeCallbacks(flingScroll);
+                // If we touch while music is playing, stop the midi player 
                 if (player != null && player.getVisibility() == View.GONE) {
                     player.Pause();
-                    inMotion = false;
-                    return true;
+                    scrollAnimation.stopMotion();
                 }
-                inMotion = true;
-                startMotionX = (int)event.getX();
-                startMotionY = (int)event.getY();
-                return true;
+                return result;
+
             case MotionEvent.ACTION_MOVE:
-                if (!inMotion)
-                    return false;
-
-                deltaX = startMotionX - event.getX();
-                deltaY = startMotionY - event.getY();
-                startMotionX = (int)event.getX();
-                startMotionY = (int)event.getY();
-                if (scrollVert) {
-                    scrollY += (int)deltaY;
-                }
-                else {
-                    scrollX += (int)deltaX;
-                    if ((Math.abs(deltaY) > Math.abs(deltaX)) ||
-                        (Math.abs(deltaY) > 4)) {
-                        scrollY += (int)deltaY;
-                    }
-
-                }
-                checkScrollBounds();
-                lastMotionTime = AnimationUtils.currentAnimationTimeMillis();
-                callOnDraw();
-                return true;
+                return result;
 
             case MotionEvent.ACTION_UP:
-                inMotion = false;
-                long deltaTime = AnimationUtils.currentAnimationTimeMillis() - lastMotionTime;
-                if (deltaTime >= 100) {
-                    return true;
-                }
-                if (scrollVert && (Math.abs(deltaY) <= 5)) {
-                    return true;
-                }
-                if (!scrollVert && (Math.abs(deltaX) <= 5)) {
-                    return true;
-                }
+                return result;
 
-                /* Keep scrolling for 2 more seconds.
-                 * Scale the delta to 20 msec.
-                 * Make sure delta doesn't exceed the maximum scroll delta.
-                 */
-                int msecInterval = 20;
-                deltaX = deltaX * msecInterval/deltaTime;
-                deltaY = deltaY * msecInterval/deltaTime;
-                int maxscroll = StaffHeight * 4;
-                if (Math.abs(deltaX) > maxscroll) {
-                    deltaX = deltaX/Math.abs(deltaX) * StaffHeight;
-                }
-                if (Math.abs(deltaY) > maxscroll) {
-                    deltaY = deltaY/Math.abs(deltaY) * StaffHeight;
-                }
-                int duration = 2000 / msecInterval;
-                for (int i = 1; i <= duration; i++) {
-                    scrollTimer.postDelayed(flingScroll, i * msecInterval);
-                }
-                return true;
             default:
                 return false;
         }
     }
 
-    /** The timer callback for doing 'fling' scrolling.
-     *  Adjust the scrollX/scrollY using the last delta.
-     *  Redraw the sheet music.
-     *  Then, schedule this timer again, after 30 msec.
-     */
-    Runnable flingScroll = new Runnable() {
-      public void run() {
-        if (scrollVert && (Math.abs(deltaY) >= 5)) {
-            scrollY += (int)deltaY;
-            checkScrollBounds();
-            callOnDraw();
-            deltaY = deltaY * 9.2f/10.0f;
+
+    /** Update the scroll position. Callback by ScrollAnimation */
+    public void scrollUpdate(int deltaX, int deltaY) {
+        scrollX += deltaX;
+        scrollY += deltaY;
+        checkScrollBounds();
+        callOnDraw();
+    }
+
+    /** When the scroll is tapped, highlight the position tapped */
+    public void scrollTapped(int x, int y) {
+        if (player != null) {
+            player.MoveToClicked(scrollX + x, scrollY + y);
         }
-        else if (!scrollVert && (Math.abs(deltaX) >= 5)) {
-            scrollX += (int)deltaX;
-            checkScrollBounds();
-            callOnDraw();
-            deltaX = deltaX * 9.2f/10.0f;
-        }
-      }
-    };
+    }
 
     public void setPlayer(MidiPlayer p) {
         player = p;
@@ -1484,7 +1450,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback {
 
     public void setSingPitchHz(float pitchInHz) {
 
-        ShadeNotes((int)player.currentPulseTime,-10, false, pitchInHz);
+        ShadeNotes((int)player.currentPulseTime,-10, SheetMusic.DontScroll, pitchInHz);
 
         /*Staff staff = this.staffs.get(0);
         if (staff != null) {
