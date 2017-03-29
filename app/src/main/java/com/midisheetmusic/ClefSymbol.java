@@ -33,6 +33,8 @@ public class ClefSymbol implements MusicSymbol {
     private Clef clef;            /** The clef, Treble or Bass */
     private int width;
 
+    public Clef getClef() { return clef;}
+
     /** Create a new ClefSymbol, with the given clef, starttime, and size */
     public ClefSymbol(Clef clef, int starttime, boolean small) {
         this.clef = clef;

@@ -1248,10 +1248,18 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
         paint.setAntiAlias(true);
         bufferCanvas.scale(zoom, zoom);
         int ypos = 0;
+
         for (Staff staff : staffs) {
             bufferCanvas.translate(0, ypos);
-            x_shade = staff.ShadeNotes(bufferCanvas, paint, shade1, 
-                            currentPulseTime, prevPulseTime, x_shade, pitch); //, force);
+
+            if (staff.getClefSymbol().getClef() == Clef.Treble) {
+                // Only match the singing to Treble clef staff
+                x_shade = staff.ShadeNotes(bufferCanvas, paint, shade1,
+                        currentPulseTime, prevPulseTime, x_shade, pitch); //, force);
+            } else
+                x_shade = staff.ShadeNotes(bufferCanvas, paint, shade1,
+                        currentPulseTime, prevPulseTime, x_shade, -1);
+
             bufferCanvas.translate(0, -ypos);
             ypos += staff.getHeight();
             if (currentPulseTime >= staff.getEndTime()) {

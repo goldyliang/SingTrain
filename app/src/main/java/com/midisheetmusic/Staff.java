@@ -103,6 +103,8 @@ public class Staff {
     public int getEndTime() { return endtime; }
     public void setEndTime(int value) { endtime = value; }
 
+    public ClefSymbol getClefSymbol () { return clefsym;}
+
     /** Find the initial clef to use for this staff.  Use the clef of
      * the first ChordSymbol.
      */
@@ -473,10 +475,20 @@ public class Staff {
                     if (shadedChordIdx >=0) {
                         throw new IllegalStateException("Duplicated chord");
                     }
-                    shadedChordIdx = i;
-                    if (pitch > 0) {
-                        ((ChordSymbol) curr).setSingPitchInHz(pitch);
-                        System.out.println("Shaded:" + shadedChordIdx + ", pitch:" + pitch);
+
+                    /* Ignore the detected pitch at the very beginning or very end of
+                       the note's time range
+                     */
+                    int duration = end - start;
+                    if ( (currentPulseTime - start) * 5 > duration &&
+                         (end - currentPulseTime) * 5 > duration ) {
+                        shadedChordIdx = i;
+                        if (pitch > 0) {
+                            ((ChordSymbol) curr).setSingPitchInHz(pitch);
+                            System.out.println("Shaded:" + shadedChordIdx +
+                                    ", pitch:" + pitch +
+                                    ", note:" + curr.toString());
+                        }
                     }
                 }
             }
