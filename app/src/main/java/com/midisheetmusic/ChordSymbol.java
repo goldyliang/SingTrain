@@ -13,7 +13,11 @@
 package com.midisheetmusic;
 
 import java.util.*;
+
+import android.app.Activity;
 import android.graphics.*;
+
+import com.singtrain.SyllableScales;
 
 
 /** @class ChordSymbol
@@ -36,10 +40,20 @@ public class ChordSymbol implements MusicSymbol {
     private SheetMusic sheetmusic; /** Used to get colors and other options */
 
     private float singPitchInHz = -1; /** Current detected sing pitch */
+    private String singeSyllable = null; /** Current detected syllable */
 
     private final static int COLOR_HIGH = Color.RED;
     private final static int COLOR_LOW = Color.BLUE;
-    private final static int COLOR_GOOD = Color.GREEN;
+    private final static int COLOR_GOOD = Color.rgb(0,128,0);
+
+    private final static int NOTENAME_SIZE = 15;
+
+    boolean pitchRight = false;
+    boolean noteRight = false;
+
+    public boolean drawRightNoteIfSingWrong = false;
+
+    //boolean rightNotePlayed = false;
 
     /** Create a new Chord Symbol from the given list of midi notes.
      * All the midi notes will have the same start time.  Use the
@@ -298,7 +312,7 @@ public class ChordSymbol implements MusicSymbol {
             }
         }
         if (sheetmusic != null && sheetmusic.getShowNoteLetters() != MidiOptions.NoteNameNone) {
-            result += 8;
+            result += NOTENAME_SIZE;
         }
         return result;
     }
@@ -481,6 +495,30 @@ public class ChordSymbol implements MusicSymbol {
         if (sheetmusic != null && sheetmusic.getShowNoteLetters() != 0) {
             DrawNoteLetters(canvas, paint, ytop, topstaff);
         }
+        DrawSingingNoteLetter(canvas, paint, ytop, topstaff);
+
+        /* Draw the stems */
+        if (stem1 != null)
+            stem1.Draw(canvas, paint, ytop, topstaff);
+        if (stem2 != null)
+            stem2.Draw(canvas, paint, ytop, topstaff);
+
+        canvas.translate(-xpos, 0);
+        canvas.translate(-(getWidth() - getMinWidth()), 0);
+    }
+
+    public void DrawWithoutNoteName(Canvas canvas, Paint paint, int ytop) {
+        paint.setStyle(Paint.Style.STROKE);
+
+        /* Align the chord to the right */
+        canvas.translate(getWidth() - getMinWidth(), 0);
+
+        /* Draw the accidentals. */
+        WhiteNote topstaff = WhiteNote.Top(clef);
+        int xpos = DrawAccid(canvas, paint, ytop);
+
+        /* Draw the notes */
+        canvas.translate(xpos, 0);
 
         /* Draw the stems */
         if (stem1 != null)
@@ -622,6 +660,11 @@ public class ChordSymbol implements MusicSymbol {
 
         }
     }
+
+    public String getRightSingingNote() {
+        return NoteName (notedata[0].number, notedata[0].whitenote);
+    }
+
     public void DrawSingingNote(Canvas canvas, Paint paint, int ytop, WhiteNote topstaff) {
         if (singPitchInHz <= 0)
             return;
@@ -647,12 +690,16 @@ public class ChordSymbol implements MusicSymbol {
 
         /* Get whether it is high, low or in tune */
         NoteData rightNote = notedata[0];
-        if (closestNoteNumber == rightNote.number)
-            paint.setColor( COLOR_GOOD );
-        else if (closestNoteNumber > rightNote.number)
-            paint.setColor( COLOR_HIGH );
-        else
-            paint.setColor( COLOR_LOW );
+        if (closestNoteNumber == rightNote.number) {
+            paint.setColor(Color.GREEN);
+            pitchRight = true;
+        } else if (closestNoteNumber > rightNote.number) {
+            paint.setColor(COLOR_HIGH);
+            pitchRight = false;
+        } else {
+            paint.setColor(COLOR_LOW);
+            pitchRight = false;
+        }
 
         /* Get the x,y position to draw the note */
         int ynote = ytop + topstaff.Dist(note.whitenote) *
@@ -764,7 +811,9 @@ public class ChordSymbol implements MusicSymbol {
      * @param topstaff The white note of the top of the staff.
      */
     public void DrawNoteLetters(Canvas canvas, Paint paint, int ytop, WhiteNote topstaff) {
-        boolean overlap = NotesOverlap(notedata, 0, notedata.length);
+        return;
+
+        /*boolean overlap = NotesOverlap(notedata, 0, notedata.length);
         paint.setStrokeWidth(1);
 
         for (NoteData note : notedata) {
@@ -789,7 +838,64 @@ public class ChordSymbol implements MusicSymbol {
             canvas.drawText(NoteName(note.number, note.whitenote),
                             xnote,
                             ynote + SheetMusic.NoteHeight/2, paint);
+        }*/
+    }
+
+    public void DrawSingingNoteLetter(Canvas canvas, Paint paint, int ytop, WhiteNote topstaff) {
+        if (singeSyllable==null && !drawRightNoteIfSingWrong)
+            return;
+
+        boolean overlap = NotesOverlap(notedata, 0, notedata.length);
+        paint.setTextSize(NOTENAME_SIZE);
+        //paint.setStrokeWidth(1);
+
+        NoteData note = notedata[0];
+
+        //if (!note.leftside) {
+            // There's not enough pixel room to show the letter
+        //    return;
+        //}
+
+        // Get the x,y position to draw the note
+        int ynote = ytop + topstaff.Dist(note.whitenote) *
+                SheetMusic.NoteHeight/2;
+
+        // Draw the letter to the right side of the note
+        int xnote = SheetMusic.NoteWidth + SheetMusic.NoteWidth/2;
+
+        /*if (note.duration == NoteDuration.DottedHalf ||
+                note.duration == NoteDuration.DottedQuarter ||
+                note.duration == NoteDuration.DottedEighth || overlap) {
+
+            xnote += SheetMusic.NoteWidth/2;
+        } */
+
+        String noteName = NoteName(note.number, note.whitenote);
+
+        String toPrint = null;
+        if (noteName.toLowerCase().equals(singeSyllable)) {
+            toPrint = noteName;
+            paint.setColor(COLOR_GOOD);
+            noteRight = true;
+        } else {
+            if (drawRightNoteIfSingWrong)
+                toPrint = noteName;
+            else
+                toPrint = "?";
+
+            paint.setColor(Color.RED);
+            noteRight = false;
         }
+
+        canvas.drawText(toPrint,
+                xnote,
+                ynote + SheetMusic.NoteHeight/2, paint);
+
+        paint.setColor(Color.BLACK);
+    }
+
+    public boolean singRight() {
+        return pitchRight && noteRight;
     }
 
 
@@ -1137,7 +1243,36 @@ public class ChordSymbol implements MusicSymbol {
         return result; 
     }
 
+    public void playRightNote() {
+        //if (!rightNotePlayed) {
+        NoteData rigntNote = notedata[0];
+        String name = NoteName(rigntNote.number, rigntNote.whitenote);
+
+        float volume;
+
+        /*if (pitchRight && noteRight)
+            volume = 0.3f;
+        else if (pitchRight || noteRight)
+            volume = 0.5f;
+        else
+            volume = 0.8f; */
+        volume = 0.8f;
+
+        SyllableScales.playNote(name, volume);
+        //}
+        //rightNotePlayed = true;
+    }
+
+    public void resetSing() {
+        singPitchInHz = -1.0f;
+        singeSyllable = null;
+        pitchRight = false;
+        noteRight = false;
+    }
+
     public void setSingPitchInHz(float singPitchInHz) {
+        if (sheetmusic.isPaused() && singRight())
+            return;
 
         /* Try to see whether double, or half, is more close */
         int noteRight = notedata[0].number;
@@ -1155,7 +1290,13 @@ public class ChordSymbol implements MusicSymbol {
             this.singPitchInHz = singPitchInHz * 2;
         else
             this.singPitchInHz = singPitchInHz / 2;
+    }
 
+    public void setSingSyllable(String syllable) {
+        if (sheetmusic.isPaused() && singRight())
+            return;
+
+        this.singeSyllable = syllable;
     }
 
     public float getSingPitchInHz() {

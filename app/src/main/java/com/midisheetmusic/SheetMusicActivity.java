@@ -17,7 +17,6 @@ import java.net.*;
 import android.app.*;
 import android.net.Uri;
 import android.os.*;
-import android.util.*;
 import android.widget.*;
 import android.view.*;
 import android.graphics.*;
@@ -25,6 +24,8 @@ import android.content.*;
 import android.content.res.*;
 import android.media.*;
 import java.util.zip.CRC32;
+
+import com.singtrain.SyllableScales;
 import com.singtrain.TrainDetectListener;
 import com.singtrain.TrainDetector;
 
@@ -53,7 +54,14 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
 
 	private TrainDetector detector;
 
-     /** Create this SheetMusicActivity.  
+    public String audioOutputFile = null;
+
+    public boolean waitUntilRight = false;
+    public boolean singAlong = false;
+    public boolean echoCancel = true;
+
+
+    /** Create this SheetMusicActivity.
       * The Intent should have two parameters:
       * - data: The uri of the midi file to open.
       * - MidiTitleID: The title of the song (String)
@@ -102,15 +110,62 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
         }
         createView();
         createSheetMusic(options);
-        detector = new TrainDetector();
+    }
 
-        try {
-            Assets assets = new Assets(this);
-            File assetDir = assets.syncAssets();
-            detector.startDetect(getApplicationContext(), assetDir, this);
-        } catch (IOException e) {
-            return;
+    public void startDetect() {
+        new AsyncTask<Void, Void, Exception>() {
+            @Override
+            protected Exception doInBackground(Void... params) {
+
+                if (detector == null)
+                    detector = new TrainDetector();
+
+                try {
+                    Assets assets = new Assets(SheetMusicActivity.this);
+                    File assetDir = assets.syncAssets();
+                    System.out.println("Start detect...");
+                    audioOutputFile = getApplicationContext().getFilesDir() + "/aduioOut.3pp";
+
+                    int source;
+                    if (echoCancel)
+                        source = MediaRecorder.AudioSource.VOICE_COMMUNICATION;
+                    else
+                        source = MediaRecorder.AudioSource.MIC;
+
+                    detector.startDetect(source, getApplicationContext(), assetDir, SheetMusicActivity.this, audioOutputFile);
+                } catch (IOException e) {
+                    return e;
+                }
+
+                try {
+                    if (!SyllableScales.isInit())
+                        SyllableScales.init(getApplicationContext());
+                } catch (Exception e) {
+                    return e;
+                }
+                return null;
+            }
+        }.execute();
+    }
+
+    @Override
+    public void onStart() {
+        startDetect();
+
+        super.onStart();
+    }
+
+    public void stopDetect() {
+        if (detector != null) {
+            System.out.println("Stop detect...");
+
+            detector.stopDetect();
         }
+    }
+    @Override
+    public void onStop() {
+        stopDetect();
+        super.onStop();
     }
     
     /* Create the MidiPlayer and Piano views */
@@ -358,18 +413,67 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
         super.onPause();
     }
 
+    private long startCurrentSingingNote = 0;
+    private boolean currentNotePlayed = false;
+
     @Override
     public void onPitch(float pitchInHz) {
-        if (pitchInHz <=0 )
+        if (pitchInHz <=0 ) {
+            if (player.playstate == player.paused && startCurrentSingingNote > 0) {
+                if (waitUntilRight) {
+                    moveToNextChordIfSingRight();
+                } else {
+                    moveToNextChord();
+                }
+            }
+            startCurrentSingingNote = 0;
             return;
+        }
 
         sheet.setSingPitchHz( pitchInHz ); //293.7f); //pitchInHz);
+
+        long now = System.currentTimeMillis();
+
+        if (startCurrentSingingNote == 0) {
+            startCurrentSingingNote = now;
+            currentNotePlayed = false;
+        }
+        else if (!currentNotePlayed && now - startCurrentSingingNote > 100) {
+            if (singAlong && player.playstate == player.paused && sheet.getSingingChord() != null) {
+                sheet.getSingingChord().playRightNote();
+                currentNotePlayed = true;
+            }
+        }
+
         //sheet.callOnDraw();
     }
 
     @Override
     public void onSyllable(String syllable) {
+        sheet.setSingSyllable(syllable);
+    }
 
+    private void moveToNextChord() {
+        // Move to next note
+        ChordSymbol next = sheet.getNextSingingChord();
+        if (next == null)
+            return;
+
+        int start = next.getStartTime();
+        int end = next.getEndTime();
+        int t = (start + end) / 2;
+        int prev = (int)player.currentPulseTime;
+        int curr = t;
+        sheet.ShadeNotes(curr, (int) prev, SheetMusic.DontScroll, -1, null, true, true);
+        player.prevPulseTime = prev;
+        player.currentPulseTime = curr;
+    }
+
+    private void moveToNextChordIfSingRight() {
+        ChordSymbol chord = sheet.getSingingChord();
+        if (chord != null && chord.singRight()) {
+            moveToNextChord();
+        }
     }
 }
 

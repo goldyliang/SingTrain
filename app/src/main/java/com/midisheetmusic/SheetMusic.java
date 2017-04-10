@@ -22,6 +22,8 @@ import android.util.Log;
 import android.view.*;
 import android.view.animation.AnimationUtils;
 
+import com.singtrain.SyllableScales;
+
 /** @class BoxedInt **/
 class BoxedInt {
     public int value;
@@ -971,6 +973,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
             return;
         }
         onDraw(canvas);
+        //draw(canvas);
         holder.unlockCanvasAndPost(canvas);
     }
 
@@ -1213,6 +1216,15 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
     }
 
 
+    public Staff getClefStaff() {
+        for (Staff staff : staffs) {
+            if (staff.getClefSymbol().getClef() == Clef.Treble) {
+                return staff;
+            }
+        }
+        return null;
+    }
+
     /** Shade all the chords played at the given pulse time.
      *  First, make sure the current scroll position is in the bufferBitmap.
      *  Loop through all the staffs and call staff.Shade().
@@ -1220,7 +1232,8 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
      *  to the shaded notes.
      */
     synchronized public void ShadeNotes(int currentPulseTime, int prevPulseTime, 
-			int scrollType, float pitch) {
+			int scrollType, float pitch, String syllable, boolean reset,
+                                        boolean showPreviousRightNote) {
         if (!surfaceReady || staffs == null) {
             return;
         }
@@ -1255,10 +1268,10 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
             if (staff.getClefSymbol().getClef() == Clef.Treble) {
                 // Only match the singing to Treble clef staff
                 x_shade = staff.ShadeNotes(bufferCanvas, paint, shade1,
-                        currentPulseTime, prevPulseTime, x_shade, pitch); //, force);
+                        currentPulseTime, prevPulseTime, x_shade, pitch, syllable, reset, showPreviousRightNote); //, force);
             } else
                 x_shade = staff.ShadeNotes(bufferCanvas, paint, shade1,
-                        currentPulseTime, prevPulseTime, x_shade, -1);
+                        currentPulseTime, prevPulseTime, x_shade, -1, null, reset, showPreviousRightNote);
 
             bufferCanvas.translate(0, -ypos);
             ypos += staff.getHeight();
@@ -1290,7 +1303,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
          * we have to call this method again.
          */
         if (scrollX < bufferX || scrollY < bufferY) {
-            ShadeNotes(currentPulseTime, prevPulseTime, scrollType, pitch);
+            ShadeNotes(currentPulseTime, prevPulseTime, scrollType, pitch, syllable, reset, showPreviousRightNote);
             return;
         }
 
@@ -1398,6 +1411,12 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
                     player.Pause();
                     scrollAnimation.stopMotion();
                 }
+
+                //SyllableScales.playNote("Do");
+                /*ChordSymbol chord = getClefStaff().getShadedChord();
+                if (chord != null)
+                    SyllableScales.playNote(chord.getRightSingingNote());*/
+
                 return result;
 
             case MotionEvent.ACTION_MOVE:
@@ -1437,12 +1456,16 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
     }
 
     /** Surface is ready for shading the notes */
+    @Override
     public void surfaceCreated(SurfaceHolder holder) {
+        System.out.println("surfaceReady=true");
         surfaceReady = true;
     }
 
     /** Surface has been destroyed */
+    @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
+        System.out.println("surfaceReady=false");
         surfaceReady = false;
     }
 
@@ -1458,7 +1481,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
 
     public void setSingPitchHz(float pitchInHz) {
 
-        ShadeNotes((int)player.currentPulseTime,-10, SheetMusic.DontScroll, pitchInHz);
+        ShadeNotes((int)player.currentPulseTime,-10, SheetMusic.DontScroll, pitchInHz, null, false, false);
 
         /*Staff staff = this.staffs.get(0);
         if (staff != null) {
@@ -1476,5 +1499,44 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
         }*/
     }
 
+    public void setSingSyllable(String syllable) {
+        ShadeNotes((int)player.currentPulseTime,-10, SheetMusic.DontScroll, -1, syllable, false, false);
+    }
+
+    public ChordSymbol getSingingChord() {
+        return staffs.get(0).getShadedChord();
+    }
+
+    public ChordSymbol getNextSingingChord() {
+        Iterator<Staff> iter = staffs.iterator();
+
+        while (iter.hasNext()) {
+            Staff staff = iter.next();
+            if (staff.getClefSymbol().getClef() == Clef.Treble) {
+                if (staff.getShadedChord() != null) {
+                    ChordSymbol next = staff.getNextChord();
+                    if (next != null)
+                        return next;
+
+                    // Find next treble chord
+                    while (iter.hasNext()) {
+                        staff = iter.next();
+                        if (staff.getClefSymbol().getClef() == Clef.Treble) {
+                            next = staff.getFirstChord();
+                            return next;
+                        }
+                    }
+
+                    // No next treble, return null
+                    return null;
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean isPaused() {
+        return player.playstate == player.paused;
+    }
 }
 

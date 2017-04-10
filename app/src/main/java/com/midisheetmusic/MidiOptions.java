@@ -68,7 +68,7 @@ public class MidiOptions implements Serializable {
 
     /* Initialize the default settings/options for the given MidiFile */
     public MidiOptions(MidiFile midifile) {
-        showPiano = true;
+        showPiano =  false;//true;
         int num_tracks = midifile.getTracks().size();
         tracks = new boolean[num_tracks];
         mute = new boolean[num_tracks];
@@ -93,7 +93,7 @@ public class MidiOptions implements Serializable {
         else {
             twoStaffs = false;
         }
-        showNoteLetters = NoteNameNone;
+        showNoteLetters = NoteNameFixedDoReMi; //NoteNameNone;
         showMeasures = false;
         showLyrics = true;
         shifttime = 0;

@@ -380,13 +380,32 @@ public class Staff {
             return null;
     }
 
+    public ChordSymbol getNextChord() {
+        if (shadedChordIdx >= 0) {
+            for (int i = shadedChordIdx + 1; i<symbols.size(); i++) {
+                if (symbols.get(i) instanceof ChordSymbol)
+                    return (ChordSymbol)symbols.get(i);
+            }
+        }
+        return null;
+    }
+
+    public ChordSymbol getFirstChord() {
+        for (int i = 0; i<symbols.size(); i++) {
+            if (symbols.get(i) instanceof ChordSymbol)
+                return (ChordSymbol)symbols.get(i);
+        }
+        return null;
+    }
+
+
     /** Shade all the chords played in the given time.
      *  Un-shade any chords shaded in the previous pulse time.
      *  Store the x coordinate location where the shade was drawn.
      */
     public int ShadeNotes(Canvas canvas, Paint paint, int shade,
-                           int currentPulseTime, int prevPulseTime, int x_shade, float pitch ) {
-                           //boolean force) {
+                           int currentPulseTime, int prevPulseTime, int x_shade, float pitch, String syllable,
+                           boolean reset, boolean showPreviousRightNote) {
 
         /* If there's nothing to unshade, or shade, return */
         if ((starttime > prevPulseTime || endtime < prevPulseTime) &&
@@ -453,7 +472,14 @@ public class Staff {
                 paint.setColor(Color.BLACK);
                 canvas.translate(-(xpos-2), 2);
                 canvas.translate(xpos, 0);
+
+                if (curr instanceof ChordSymbol && showPreviousRightNote) {
+                    ((ChordSymbol) curr).drawRightNoteIfSingWrong = true;
+                }
                 curr.Draw(canvas, paint, ytop);
+                if (curr instanceof ChordSymbol) {
+                    ((ChordSymbol) curr).drawRightNoteIfSingWrong = false;
+                }
                 canvas.translate(-xpos, 0);
 
                 redrawLines = true;
@@ -461,6 +487,42 @@ public class Staff {
 
             /* If symbol is in the current time, draw a shaded background */
             if ((start <= currentPulseTime) && (currentPulseTime < end)) {
+                if (curr instanceof ChordSymbol) {
+                    if (shadedChordIdx >=0) {
+                        throw new IllegalStateException("Duplicated chord");
+                    }
+
+                    /* Ignore the detected pitch at the very end of
+                       the note's time range
+                     */
+                    shadedChordIdx = i;
+
+                    ChordSymbol chordSym = (ChordSymbol) curr;
+                    chordSym.drawRightNoteIfSingWrong = false;
+
+                    int duration = end - start;
+                    if (reset) {
+                        chordSym.resetSing();
+                        System.out.println("Reset:" + shadedChordIdx);
+                    } else if ( //(currentPulseTime - start) * 5 > duration &&
+                            (end - currentPulseTime) * 5 > duration ) {
+
+                        if (pitch > 0) {
+                            chordSym.setSingPitchInHz(pitch);
+                            System.out.println("Shaded:" + shadedChordIdx +
+                                    ", pitch:" + pitch +
+                                    ", note:" + curr.toString());
+                        }
+
+                        if (syllable!=null && !syllable.isEmpty()) {
+                            chordSym.setSingSyllable(syllable);
+                            System.out.println("Shaded:" + shadedChordIdx +
+                                    ", syllable:" + syllable +
+                                    ", note:" + curr.toString());
+                        }
+                    }
+                }
+
                 x_shade = xpos;
                 canvas.translate(xpos, 0);
                 paint.setStyle(Paint.Style.FILL);
@@ -471,26 +533,6 @@ public class Staff {
                 curr.Draw(canvas, paint, ytop);
                 canvas.translate(-xpos, 0);
                 redrawLines = true;
-                if (curr instanceof ChordSymbol) {
-                    if (shadedChordIdx >=0) {
-                        throw new IllegalStateException("Duplicated chord");
-                    }
-
-                    /* Ignore the detected pitch at the very beginning or very end of
-                       the note's time range
-                     */
-                    int duration = end - start;
-                    if ( (currentPulseTime - start) * 5 > duration &&
-                         (end - currentPulseTime) * 5 > duration ) {
-                        shadedChordIdx = i;
-                        if (pitch > 0) {
-                            ((ChordSymbol) curr).setSingPitchInHz(pitch);
-                            System.out.println("Shaded:" + shadedChordIdx +
-                                    ", pitch:" + pitch +
-                                    ", note:" + curr.toString());
-                        }
-                    }
-                }
             }
 
             /* If either a gray or white background was drawn, we need to redraw
@@ -511,7 +553,8 @@ public class Staff {
 
                 if (prevChord != null) {
                     canvas.translate(prev_xpos, 0);
-                    prevChord.Draw(canvas, paint, ytop);
+                    //prevChord.Draw(canvas, paint, ytop);
+                    prevChord.DrawWithoutNoteName(canvas, paint, ytop);
                     canvas.translate(-prev_xpos, 0);
                 }
                 if (showMeasures) {
@@ -569,6 +612,7 @@ public class Staff {
         result += "End Staff\n";
         return result;
     }
+
 
 }
 

@@ -27,6 +27,11 @@ public class AudioRecordFromDispatcher extends AudioRecord {
     private int channelCfg;
     private int audioFmt;
 
+    private long startTime = 0;
+
+    public long getStartTime() {
+        return startTime;
+    }
 
     public AudioRecordFromDispatcher(
             AudioDispatcher dispatcher, int audioSource, int sampleRateInHz, int channelConfig, int audioFormat, int bufferSizeInBytes ) {
@@ -61,6 +66,7 @@ public class AudioRecordFromDispatcher extends AudioRecord {
             }
             return len;
         } catch (InterruptedException | IllegalStateException e) {
+            Thread.currentThread().interrupt();
             return 0;
         }
     }
@@ -75,6 +81,11 @@ public class AudioRecordFromDispatcher extends AudioRecord {
             public boolean process(AudioEvent audioEvent) {
                 if (audioEvent.getSampleRate() != sampleRate)
                     throw new IllegalStateException("Not correct sample rate");
+
+                if (startTime == 0) {
+                    startTime = System.currentTimeMillis();
+                    System.out.println("Start time: " + startTime);
+                }
 
                 byte[] buffer = audioEvent.getByteBuffer();
                 int size = audioEvent.getBufferSize();

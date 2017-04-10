@@ -5,7 +5,7 @@ android {
 
     defaultConfig {
         applicationId "com.midisheetmusic"
-        minSdkVersion 14
+        minSdkVersion 22
         targetSdkVersion 22
     }
 
