@@ -14,11 +14,11 @@ package com.midisheetmusic;
 
 import java.util.*;
 
-import android.app.Activity;
 import android.graphics.*;
 
-import com.singtrain.SyllableScales;
-
+import com.singtrain.SingNote;
+import com.singtrain.SingNotes;
+import android.content.Context;
 
 /** @class ChordSymbol
  * A chord symbol represents a group of notes that are played at the same
@@ -30,7 +30,8 @@ import com.singtrain.SyllableScales;
 public class ChordSymbol implements MusicSymbol {
     private Clef clef;             /** Which clef the chord is being drawn in */
     private int starttime;         /** The time (in pulses) the notes occurs at */
-    private int endtime;           /** The starttime plus the longest note duration */
+    private int endtime;           /** The starttime plus the longest note durationMSec */
+    private int singNoteDuration;
     private NoteData[] notedata;   /** The notes to draw */
     private AccidSymbol[] accidsymbols;   /** The accidental symbols to draw */
     private int width;             /** The width of the chord */
@@ -58,7 +59,7 @@ public class ChordSymbol implements MusicSymbol {
     /** Create a new Chord Symbol from the given list of midi notes.
      * All the midi notes will have the same start time.  Use the
      * key signature to get the white key and accidental symbol for
-     * each note.  Use the time signature to calculate the duration
+     * each note.  Use the time signature to calculate the durationMSec
      * of the notes. Use the clef when drawing the chord.
      */
     public ChordSymbol(ArrayList<MidiNote> midinotes, KeySignature key, 
@@ -86,6 +87,7 @@ public class ChordSymbol implements MusicSymbol {
         notedata = CreateNoteData(midinotes, key, time);
         accidsymbols = CreateAccidSymbols(notedata, clef);
 
+        singNoteDuration = midinotes.get(0).getDuration();
 
         /* Find out how many stems we need (1 or 2) */
         NoteDuration dur1 = notedata[0].duration;
@@ -102,10 +104,10 @@ public class ChordSymbol implements MusicSymbol {
         if (dur1 != dur2) {
             /* We have notes with different durations.  So we will need
              * two stems.  The first stem points down, and contains the
-             * bottom note up to the note with the different duration.
+             * bottom note up to the note with the different durationMSec.
              *
              * The second stem points up, and contains the note with the
-             * different duration up to the top note.
+             * different durationMSec up to the top note.
              */
             hastwostems = true;
             stem1 = new Stem(notedata[0].whitenote, 
@@ -123,7 +125,7 @@ public class ChordSymbol implements MusicSymbol {
                             );
         }
         else {
-            /* All notes have the same duration, so we only need one stem. */
+            /* All notes have the same durationMSec, so we only need one stem. */
             int direction = StemDirection(notedata[0].whitenote, 
                                           notedata[notedata.length-1].whitenote,
                                           clef);
@@ -147,18 +149,18 @@ public class ChordSymbol implements MusicSymbol {
     }
 
 
-    /** Given the raw midi notes (the note number and duration in pulses),
+    /** Given the raw midi notes (the note number and durationMSec in pulses),
      * calculate the following note data:
      * - The white key
      * - The accidental (if any)
-     * - The note duration (half, quarter, eighth, etc)
+     * - The note durationMSec (half, quarter, eighth, etc)
      * - The side it should be drawn (left or side)
      * By default, notes are drawn on the left side.  However, if two notes
      * overlap (like A and B) you cannot draw the next note directly above it.
      * Instead you must shift one of the notes to the right.
      *
      * The KeySignature is used to determine the white key and accidental.
-     * The TimeSignature is used to determine the duration.
+     * The TimeSignature is used to determine the durationMSec.
      */
  
     private static NoteData[] 
@@ -191,6 +193,7 @@ public class ChordSymbol implements MusicSymbol {
                 notedata[i].leftside = true;
             }
         }
+
         return notedata;
     }
 
@@ -267,11 +270,11 @@ public class ChordSymbol implements MusicSymbol {
     /** Return true if this chord has two stems */
     public boolean getHasTwoStems() { return hastwostems; }
 
-    /* Return the stem will the smallest duration.  This property
+    /* Return the stem will the smallest durationMSec.  This property
      * is used when making chord pairs (chords joined by a horizontal
      * beam stem). The stem durations must match in order to make
      * a chord pair.  If a chord has two stems, we always return
-     * the one with a smaller duration, because it has a better 
+     * the one with a smaller durationMSec, because it has a better
      * chance of making a pair.
      */
     public Stem getStem() { 
@@ -617,7 +620,7 @@ public class ChordSymbol implements MusicSymbol {
             canvas.translate(- (xnote + SheetMusic.NoteWidth/2 + 1), 
                              - (ynote - SheetMusic.LineWidth + SheetMusic.NoteHeight/2));
 
-            /* Draw a dot if this is a dotted duration. */
+            /* Draw a dot if this is a dotted durationMSec. */
             if (note.duration == NoteDuration.DottedHalf ||
                 note.duration == NoteDuration.DottedQuarter ||
                 note.duration == NoteDuration.DottedEighth) {
@@ -764,7 +767,7 @@ public class ChordSymbol implements MusicSymbol {
         canvas.translate(- (xnote + SheetMusic.NoteWidth/2 + 1),
                 - (ynote - SheetMusic.LineWidth + SheetMusic.NoteHeight/2));
 
-        /* Draw a dot if this is a dotted duration. */
+        /* Draw a dot if this is a dotted durationMSec. */
         if (note.duration == NoteDuration.DottedHalf ||
                 note.duration == NoteDuration.DottedQuarter ||
                 note.duration == NoteDuration.DottedEighth) {
@@ -829,9 +832,9 @@ public class ChordSymbol implements MusicSymbol {
             // Draw the letter to the right side of the note 
             int xnote = SheetMusic.NoteWidth + SheetMusic.NoteWidth/2;
 
-            if (note.duration == NoteDuration.DottedHalf ||
-                note.duration == NoteDuration.DottedQuarter ||
-                note.duration == NoteDuration.DottedEighth || overlap) {
+            if (note.durationMSec == NoteDuration.DottedHalf ||
+                note.durationMSec == NoteDuration.DottedQuarter ||
+                note.durationMSec == NoteDuration.DottedEighth || overlap) {
 
                 xnote += SheetMusic.NoteWidth/2;
             } 
@@ -863,9 +866,9 @@ public class ChordSymbol implements MusicSymbol {
         // Draw the letter to the right side of the note
         int xnote = SheetMusic.NoteWidth + SheetMusic.NoteWidth/2;
 
-        /*if (note.duration == NoteDuration.DottedHalf ||
-                note.duration == NoteDuration.DottedQuarter ||
-                note.duration == NoteDuration.DottedEighth || overlap) {
+        /*if (note.durationMSec == NoteDuration.DottedHalf ||
+                note.durationMSec == NoteDuration.DottedQuarter ||
+                note.durationMSec == NoteDuration.DottedEighth || overlap) {
 
             xnote += SheetMusic.NoteWidth/2;
         } */
@@ -903,17 +906,17 @@ public class ChordSymbol implements MusicSymbol {
      * joined by a horizontal beam. In order to create the beam:
      *
      * - The chords must be in the same measure.
-     * - The chord stems should not be a dotted duration.
-     * - The chord stems must be the same duration, with one exception
+     * - The chord stems should not be a dotted durationMSec.
+     * - The chord stems must be the same durationMSec, with one exception
      *   (Dotted Eighth to Sixteenth).
      * - The stems must all point in the same direction (up or down).
      * - The chord cannot already be part of a beam.
      *
      * - 6-chord beams must be 8th notes in 3/4, 6/8, or 6/4 time
      * - 3-chord beams must be either triplets, or 8th notes (12/8 time signature)
-     * - 4-chord beams are ok for 2/2, 2/4 or 4/4 time, any duration
-     * - 4-chord beams are ok for other times if the duration is 16th
-     * - 2-chord beams are ok for any duration
+     * - 4-chord beams are ok for 2/2, 2/4 or 4/4 time, any durationMSec
+     * - 4-chord beams are ok for other times if the durationMSec is 16th
+     * - 2-chord beams are ok for any durationMSec
      *
      * If startQuarter is true, the first note should start on a quarter note
      * (only applies to 2-chord beams).
@@ -1231,7 +1234,7 @@ public class ChordSymbol implements MusicSymbol {
             result += symbol.toString() + " ";
         }
         for (NoteData note : notedata) {
-            result += String.format("Note whitenote=%1$s duration=%2$s leftside=%3$s ",
+            result += String.format("Note whitenote=%1$s durationMSec=%2$s leftside=%3$s ",
                                     note.whitenote, note.duration, note.leftside);
         }
         if (stem1 != null) {
@@ -1243,7 +1246,7 @@ public class ChordSymbol implements MusicSymbol {
         return result; 
     }
 
-    public void playRightNote() {
+    public void playRightNote(Context context, double pulsePerMsec) {
         //if (!rightNotePlayed) {
         NoteData rigntNote = notedata[0];
         String name = NoteName(rigntNote.number, rigntNote.whitenote);
@@ -1258,7 +1261,12 @@ public class ChordSymbol implements MusicSymbol {
             volume = 0.8f; */
         volume = 0.8f;
 
-        SyllableScales.playNote(name, volume);
+        SingNote note = new SingNote();
+        note.noteName = name;
+        note.noteNumber = rigntNote.number;
+        note.durationMSec =  (int)Math.round(singNoteDuration / pulsePerMsec);
+
+        SingNotes.playNote(context, note, volume);
         //}
         //rightNotePlayed = true;
     }

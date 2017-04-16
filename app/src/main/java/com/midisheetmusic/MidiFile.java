@@ -446,7 +446,7 @@ public class MidiFile {
      * - The raw list of midi events
      * - The Time Signature of the song
      * - All the tracks in the song which contain notes. 
-     * - The number, starttime, and duration of each note.
+     * - The number, starttime, and durationMSec of each note.
      */
     private void parse(byte[] rawdata) {
         String id;
@@ -1209,7 +1209,7 @@ public class MidiFile {
      * This method is used by SplitTrack to determine which staff (top or bottom) a note
      * should go to.
      *
-     * For more accurate SplitTrack() results, we limit the interval/duration of this note 
+     * For more accurate SplitTrack() results, we limit the interval/durationMSec of this note
      * (and other notes) to one measure. We care only about high/low notes that are
      * reasonably close to this note.
      */
@@ -1301,7 +1301,7 @@ public class MidiFile {
              * - If this note is more than an octave from the high/low notes
              *   (that start exactly at this start time), choose the closest one.
              * - If this note is more than an octave from the high/low notes
-             *   (in this note's time duration), choose the closest one.
+             *   (in this note's time durationMSec), choose the closest one.
              * - If the high and low notes (that start exactly at this starttime)
              *   are more than an octave apart, choose the closest note.
              * - If the high and low notes (that overlap this starttime)
@@ -1557,7 +1557,7 @@ public class MidiFile {
      * look as nice.  Having nice looking sheet music is more important
      * than faithfully representing the Midi File data.
      *
-     * Therefore, this function rounds the duration of MidiNotes up to
+     * Therefore, this function rounds the durationMSec of MidiNotes up to
      * the next note where possible.
      */
     public static void
@@ -1596,9 +1596,9 @@ public class MidiFile {
                     dur = note1.getDuration();
                 }
 
-                /* Special case: If the previous note's duration
-                 * matches this note's duration, we can make a notepair.
-                 * So don't expand the duration in that case.
+                /* Special case: If the previous note's durationMSec
+                 * matches this note's durationMSec, we can make a notepair.
+                 * So don't expand the durationMSec in that case.
                  */
                 if ((prevNote.getStartTime() + prevNote.getDuration() == note1.getStartTime()) &&
                     (prevNote.getDuration() == note1.getDuration())) {

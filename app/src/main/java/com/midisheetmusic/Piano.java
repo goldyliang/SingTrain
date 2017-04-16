@@ -49,7 +49,7 @@ public class Piano extends SurfaceView implements SurfaceHolder.Callback {
 
     private boolean useTwoColors;         /** If true, use two colors for highlighting */
     private ArrayList<MidiNote> notes;    /** The Midi notes for shading */
-    private int maxShadeDuration;         /** The maximum duration we'll shade a note for */
+    private int maxShadeDuration;         /** The maximum durationMSec we'll shade a note for */
     private int showNoteLetters;          /** Display the letter for each piano note */
     private Paint paint;                  /** The paint options for drawing */
     private boolean surfaceReady;         /** True if we can draw on the surface */

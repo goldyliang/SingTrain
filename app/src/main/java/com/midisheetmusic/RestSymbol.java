@@ -17,15 +17,15 @@ import android.graphics.*;
 
 /* @class RestSymbol
  * A Rest symbol represents a rest - whole, half, quarter, or eighth.
- * The Rest symbol has a starttime and a duration, just like a regular
+ * The Rest symbol has a starttime and a durationMSec, just like a regular
  * note.
  */
 public class RestSymbol implements MusicSymbol {
     private int starttime;          /** The starttime of the rest */
-    private NoteDuration duration;  /** The rest duration (eighth, quarter, half, whole) */
+    private NoteDuration duration;  /** The rest durationMSec (eighth, quarter, half, whole) */
     private int width;              /** The width in pixels */
 
-    /** Create a new rest symbol with the given start time and duration */
+    /** Create a new rest symbol with the given start time and durationMSec */
     public RestSymbol(int start, NoteDuration dur) {
         starttime = start;
         duration = dur; 
@@ -157,7 +157,7 @@ public class RestSymbol implements MusicSymbol {
     }
 
     public String toString() {
-        return String.format("RestSymbol starttime=%1$s duration=%2$s width=%3$s",
+        return String.format("RestSymbol starttime=%1$s durationMSec=%2$s width=%3$s",
                              starttime, duration, width);
     }
 

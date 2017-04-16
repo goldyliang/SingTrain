@@ -26,18 +26,18 @@ import java.util.*;
  *             The channels for the NoteOn and NoteOff events must be
  *             the same.
  * notenumber - The note number, from 0 to 127.  Middle C is 60.
- * duration  - The time duration (measured in pulses) after which the 
+ * durationMSec  - The time durationMSec (measured in pulses) after which the
  *             note is released.
  *
- * A MidiNote is created when we encounter a NoteOff event.  The duration
+ * A MidiNote is created when we encounter a NoteOff event.  The durationMSec
  * is initially unknown (set to 0).  When the corresponding NoteOff event
- * is found, the duration is set by the method NoteOff().
+ * is found, the durationMSec is set by the method NoteOff().
  */
 public class MidiNote implements Comparator<MidiNote> {
     private int starttime;   /** The start time, in pulses */
     private int channel;     /** The channel */
     private int notenumber;  /** The note, from 0 to 127. Middle C is 60 */
-    private int duration;    /** The duration, in pulses */
+    private int duration;    /** The durationMSec, in pulses */
 
 
     /* Create a new MidiNote.  This is called when a NoteOn event is
@@ -66,7 +66,7 @@ public class MidiNote implements Comparator<MidiNote> {
     public void setDuration(int value) { duration = value; }
 
     /* A NoteOff event occurs for this note at the given time.
-     * Calculate the note duration based on the noteoff event.
+     * Calculate the note durationMSec based on the noteoff event.
      */
     public void NoteOff(int endtime) {
         duration = endtime - starttime;
@@ -91,7 +91,7 @@ public class MidiNote implements Comparator<MidiNote> {
     public 
     String toString() {
         String[] scale = new String[]{ "A", "A#", "B", "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#" };
-        return String.format("MidiNote channel=%1$s number=%2$s %3$s start=%4$s duration=%5$s",
+        return String.format("MidiNote channel=%1$s number=%2$s %3$s start=%4$s durationMSec=%5$s",
                              channel, notenumber, scale[(notenumber + 3) % 12], starttime, duration);
 
     }

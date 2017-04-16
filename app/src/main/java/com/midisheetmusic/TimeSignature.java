@@ -21,7 +21,7 @@ import java.io.*;
  * - The number of microseconds per quarter note
  *
  * In midi files, all time is measured in "pulses".  Each note has
- * a start time (measured in pulses), and a duration (measured in 
+ * a start time (measured in pulses), and a durationMSec (measured in
  * pulses).  This class is used mainly to convert pulse durations
  * (like 120, 240, etc) into note durations (half, quarter, eighth, etc).
  */
@@ -80,7 +80,7 @@ public class TimeSignature implements Serializable {
         return time / measure;
     }
 
-    /** Given a duration in pulses, return the closest note duration. */
+    /** Given a durationMSec in pulses, return the closest note durationMSec. */
     public NoteDuration GetNoteDuration(int duration) {
         int whole = quarternote * 4;
 
@@ -119,7 +119,7 @@ public class TimeSignature implements Serializable {
             return NoteDuration.ThirtySecond;
     }
 
-    /** Convert a note duration into a stem duration.  Dotted durations
+    /** Convert a note durationMSec into a stem durationMSec.  Dotted durations
      * are converted into their non-dotted equivalents.
      */
     public static NoteDuration GetStemDuration(NoteDuration dur) {
@@ -133,7 +133,7 @@ public class TimeSignature implements Serializable {
             return dur;
     }
 
-    /** Return the time period (in pulses) the the given duration spans */
+    /** Return the time period (in pulses) the the given durationMSec spans */
     public int DurationToTime(NoteDuration dur) {
         int eighth = quarternote/2;
         int sixteenth = eighth/2;

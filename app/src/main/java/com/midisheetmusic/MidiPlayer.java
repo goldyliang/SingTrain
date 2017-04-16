@@ -24,6 +24,9 @@ import android.widget.*;
 import android.os.*;
 import android.media.*;
 
+import com.singtrain.SingNote;
+import com.singtrain.SingNotes;
+
 
 /** @class MidiPlayer
  *
@@ -135,6 +138,8 @@ public class MidiPlayer extends LinearLayout {
         resizeButtons(newsize.x, newsize.y);
         player = new MediaPlayer();
         setBackgroundColor(Color.BLACK);
+
+        //updateOptions();
     }
 
     /** Get the preferred width/height given the screen width/height */
@@ -390,6 +395,8 @@ public class MidiPlayer extends LinearLayout {
             options = opt;
             sheet = s;
         }
+
+        updateOptions();
     }
 
     /** If we're paused, reshade the sheet music and piano. */
@@ -416,16 +423,26 @@ public class MidiPlayer extends LinearLayout {
         return count;
     }
 
-    /** Create a new midi file with all the MidiOptions incorporated.
-     *  Save the new file to playing.mid, and store
-     *  this temporary filename in tempSoundFile.
-     */ 
-    private void CreateMidiFile() {
+    public void updateOptions() {
         double inverse_tempo = 1.0 / midifile.getTime().getTempo();
         double inverse_tempo_scaled = inverse_tempo * speedBar.getProgress() / 100.0;
         // double inverse_tempo_scaled = inverse_tempo * 100.0 / 100.0;
         options.tempo = (int)(1.0 / inverse_tempo_scaled);
         pulsesPerMsec = midifile.getTime().getQuarter() * (1000.0 / options.tempo);
+    }
+
+    /** Create a new midi file with all the MidiOptions incorporated.
+     *  Save the new file to playing.mid, and store
+     *  this temporary filename in tempSoundFile.
+     */ 
+    private void CreateMidiFile() {
+        /*double inverse_tempo = 1.0 / midifile.getTime().getTempo();
+        double inverse_tempo_scaled = inverse_tempo * speedBar.getProgress() / 100.0;
+        // double inverse_tempo_scaled = inverse_tempo * 100.0 / 100.0;
+        options.tempo = (int)(1.0 / inverse_tempo_scaled);
+        pulsesPerMsec = midifile.getTime().getQuarter() * (1000.0 / options.tempo);*/
+
+        updateOptions();
 
         try {
             FileOutputStream dest = activity.openFileOutput(tempSoundFile, Context.MODE_PRIVATE);
@@ -780,6 +797,13 @@ public class MidiPlayer extends LinearLayout {
         prevPulseTime = -1;
         StopSound();
         timer.postDelayed(DoPlay, 300);
+    }
+
+    public void playRightNote(Context context, ChordSymbol symbol) {
+
+        symbol.playRightNote(context, pulsesPerMsec);
+        //}
+        //rightNotePlayed = true;
     }
 
 }

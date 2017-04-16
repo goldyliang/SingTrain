@@ -19,7 +19,7 @@ import android.graphics.*;
  * The Stem class is used by ChordSymbol to draw the stem portion of
  * the chord.  The stem has the following fields:
  *
- * duration  - The duration of the stem.
+ * durationMSec  - The durationMSec of the stem.
  * direction - Either Up or Down
  * side      - Either left or right
  * top       - The topmost note in the chord
@@ -57,7 +57,7 @@ public class Stem {
     public int getDirection() { return direction; }
     public void setDirection(int value) { ChangeDirection(value); }
 
-    /** Get the duration of the stem (Eigth, Sixteenth, ThirtySecond) */
+    /** Get the durationMSec of the stem (Eigth, Sixteenth, ThirtySecond) */
     public NoteDuration getDuration() { return duration; }
 
     /** Get the top note in the chord. This is needed to determine the stem direction */
@@ -80,7 +80,7 @@ public class Stem {
     public void setReceiver(boolean value) { receiver_in_pair = value; }
 
     /** Create a new stem.  The top note, bottom note, and direction are 
-     * needed for drawing the vertical line of the stem.  The duration is 
+     * needed for drawing the vertical line of the stem.  The durationMSec is
      * needed to draw the tail of the stem.  The overlap boolean is true
      * if the notes in the chord overlap.  If the notes overlap, the
      * stem must be drawn on the right side.
@@ -429,7 +429,7 @@ public class Stem {
 
     @Override
     public String toString() {
-        return String.format("Stem duration=%1$s direction=%2$s top=%3$s bottom=%4$s end=%5$s" +
+        return String.format("Stem durationMSec=%1$s direction=%2$s top=%3$s bottom=%4$s end=%5$s" +
                              " overlap=%6$s side=%7$s width_to_pair=%8$s receiver_in_pair=%9$s",
                              duration, direction, top.toString(), bottom.toString(),
                              end.toString(), notesoverlap, side, width_to_pair, receiver_in_pair);

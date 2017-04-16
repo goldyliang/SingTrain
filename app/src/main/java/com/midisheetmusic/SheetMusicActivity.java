@@ -25,7 +25,7 @@ import android.content.res.*;
 import android.media.*;
 import java.util.zip.CRC32;
 
-import com.singtrain.SyllableScales;
+import com.singtrain.SingNotes;
 import com.singtrain.TrainDetectListener;
 import com.singtrain.TrainDetector;
 
@@ -138,8 +138,11 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
                 }
 
                 try {
-                    if (!SyllableScales.isInit())
-                        SyllableScales.init(getApplicationContext());
+                    //if (!SingNotes.isInit())
+                    SingNotes.init();
+
+                    //Preload all notes
+                    //sheet.
                 } catch (Exception e) {
                     return e;
                 }
@@ -439,8 +442,9 @@ public class SheetMusicActivity extends Activity implements TrainDetectListener 
             currentNotePlayed = false;
         }
         else if (!currentNotePlayed && now - startCurrentSingingNote > 100) {
-            if (singAlong && player.playstate == player.paused && sheet.getSingingChord() != null) {
-                sheet.getSingingChord().playRightNote();
+            if (singAlong && player.playstate != player.playing && sheet.getSingingChord() != null) {
+                player.playRightNote(getApplicationContext(), sheet.getSingingChord());
+                //sheet.getSingingChord().playRightNote();
                 currentNotePlayed = true;
             }
         }

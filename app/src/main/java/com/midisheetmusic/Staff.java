@@ -504,7 +504,7 @@ public class Staff {
                     if (reset) {
                         chordSym.resetSing();
                         System.out.println("Reset:" + shadedChordIdx);
-                    } else if ( //(currentPulseTime - start) * 5 > duration &&
+                    } else if ( //(currentPulseTime - start) * 5 > durationMSec &&
                             (end - currentPulseTime) * 5 > duration ) {
 
                         if (pitch > 0) {

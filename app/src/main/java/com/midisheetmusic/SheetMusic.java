@@ -17,12 +17,7 @@ import java.io.*;
 import android.app.*;
 import android.content.*;
 import android.graphics.*;
-import android.os.*;
-import android.util.Log;
 import android.view.*;
-import android.view.animation.AnimationUtils;
-
-import com.singtrain.SyllableScales;
 
 /** @class BoxedInt **/
 class BoxedInt {
@@ -631,7 +626,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
     }
 
 
-    /** Connect chords of the same duration with a horizontal beam.
+    /** Connect chords of the same durationMSec with a horizontal beam.
      *  numChords is the number of chords per beam (2, 3, 4, or 6).
      *  if startBeat is true, the first chord must start on a quarter note beat.
      */
@@ -674,7 +669,7 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
     }
 
 
-    /** Connect chords of the same duration with a horizontal beam.
+    /** Connect chords of the same durationMSec with a horizontal beam.
      *
      *  We create beams in the following order:
      *  - 6 connected 8th note chords, in 3/4, 6/8, or 6/4 time
@@ -1412,10 +1407,10 @@ public class SheetMusic extends SurfaceView implements SurfaceHolder.Callback, S
                     scrollAnimation.stopMotion();
                 }
 
-                //SyllableScales.playNote("Do");
+                //SingNotes.playNote("Do");
                 /*ChordSymbol chord = getClefStaff().getShadedChord();
                 if (chord != null)
-                    SyllableScales.playNote(chord.getRightSingingNote());*/
+                    SingNotes.playNote(chord.getRightSingingNote());*/
 
                 return result;
 

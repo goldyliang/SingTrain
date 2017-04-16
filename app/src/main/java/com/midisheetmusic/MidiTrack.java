@@ -27,7 +27,7 @@ import java.util.*;
  * and added to the track, using the AddNote() method.
  * 
  * The NoteOff() method is called when a NoteOff event is encountered,
- * in order to update the duration of the MidiNote.
+ * in order to update the durationMSec of the MidiNote.
  */ 
 public class MidiTrack {
     private int tracknum;                 /** The track number */
@@ -100,7 +100,7 @@ public class MidiTrack {
     }
 
     /** A NoteOff event occured.  Find the MidiNote of the corresponding
-     * NoteOn event, and update the duration of the MidiNote.
+     * NoteOn event, and update the durationMSec of the MidiNote.
      */
     public void NoteOff(int channel, int notenumber, int endtime) {
         for (int i = notes.size()-1; i >= 0; i--) {
